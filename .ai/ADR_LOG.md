@@ -13,6 +13,7 @@ maxLines: 80
 |-----|--------|--------|-------|
 | [ADR-001](#adr-001) | Configuración del sistema de memoria y gobernanza | Vigente | 2026-09-27 |
 | [ADR-002](#adr-002) | shadcn/ui base-nova sobre @base-ui/react como sistema de componentes | Vigente | 2026-09-27 |
+| [ADR-003](#adr-003) | Solución .NET Clean Architecture 4 proyectos + EF Core PostgreSQL | Vigente | 2026-09-28 |
 
 ## ADRs supersedidas
 
@@ -49,3 +50,22 @@ Ninguna todavía.
 **Decisión:** los componentes de `web/components/ui/` son la fuente única de primitivas. No se introduce otra librería UI (MUI, Chakra, etc.). El copy de producto usa Material Symbols; las primitivas usan lucide-react.
 
 **Consecuencias:** para nuevos widgets usar `npx shadcn add <componente>`; extensiones por composición, nunca reescribiendo la primitiva.
+
+---
+
+## ADR-003
+
+**Título:** Solución .NET Clean Architecture 4 proyectos + EF Core PostgreSQL
+**Estado:** Vigente
+**Fecha:** 2026-09-28
+
+**Contexto:** `api/` estaba reservada. Se requiere un backend para reglas de negocio (SINPE, slots, verificación de tutores), persistencia PostgreSQL y emisión de JWT. El SDK disponible es .NET 10.0.401.
+
+**Decisión:**
+- Solución `api/AuraLearn.sln` con capas: `AuraLearn.Api` (webapi) → `AuraLearn.Application` → `AuraLearn.Domain`; `AuraLearn.Infrastructure` implementa puertos de Application.
+- EF Core 10 (Npgsql 10.0.3) con migraciones en `AuraLearn.Infrastructure/Migrations/`; columnas snake_case; índices por filtros reales del catálogo.
+- Seed del catálogo vía `HasData` estático (12 tutores); warning `PendingModelChangesWarning` suprimido explícitamente (falso-positivo de EF 10 con seed, ver `.github/errors/backend.md`).
+- JWT bearer configurado desde `Jwt:Key` (appsettings, sin secretos commiteados); endpoints de auth llegan en tarea posterior.
+- Tests xUnit en `api/tests/AuraLearn.Tests/`.
+
+**Consecuencias:** todo nuevo código backend respeta la dirección de dependencias hacia Domain; los repositorios van en Infrastructure, los casos de uso en Application; el rollback manual es obligatorio en cada migración nueva.

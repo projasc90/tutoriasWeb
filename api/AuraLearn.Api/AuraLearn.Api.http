@@ -1,0 +1,6 @@
+@AuraLearn.Api_HostAddress = http://localhost:5037
+
+GET {{AuraLearn.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

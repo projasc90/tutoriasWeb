@@ -3,87 +3,32 @@
 import { useState } from "react";
 import { MaterialIcon } from "@/components/material-icon";
 import { SiteHeader } from "@/components/landing/currency-toggle";
-
-const UNIVERSITIES = ["Todas", "UCR", "TEC", "UNA", "LEAD", "ULACIT", "U Latina"];
-const LEVELS = ["Todos", "Grado", "Bachillerato Internacional", "Examen de Admisión", "Posgrado"];
-const AVAILABILITIES = ["Cualquiera", "Hoy", "Esta semana", "Fines de semana"];
-const RATINGS = ["Cualquiera", "4.5+", "4.0+", "3.5+"];
-
-type FilterState = {
-  query: string;
-  university: string;
-  level: string;
-  availability: string;
-  minRating: string;
-  priceMin: number;
-  priceMax: number;
-};
-
-const DEFAULT_FILTERS: FilterState = {
-  query: "",
-  university: "Todas",
-  level: "Todos",
-  availability: "Cualquiera",
-  minRating: "Cualquiera",
-  priceMin: 0,
-  priceMax: 25000,
-};
-
-type Tutor = {
-  id: number;
-  initials: string;
-  name: string;
-  credentials: string;
-  university: string;
-  rating: number;
-  reviews: number;
-  subjects: string[];
-  price: number;
-  priceUsd: number;
-  nextSlot: string;
-  featured: boolean;
-  bio: string;
-  avatarTone: string;
-};
-
-const TUTORS: Tutor[] = [
-  { id: 1, initials: "CS", name: "Dr. Carlos Solano", credentials: "PhD Matemáticas", university: "UCR", rating: 4.98, reviews: 184, subjects: ["Cálculo I", "Cálculo II", "Álgebra Lineal", "EDOs"], price: 14500, priceUsd: 28, nextSlot: "Hoy, 3:30 PM", featured: true, bio: "8 años de experiencia en tutoría universitaria. Metodología orientada a resultados.", avatarTone: "from-primary to-primary-container" },
-  { id: 2, initials: "SH", name: "Ing. Sofía Hernández", credentials: "M.Sc. Computación", university: "TEC", rating: 5.0, reviews: 92, subjects: ["Python", "Algoritmos", "Estructuras de Datos", "IA"], price: 16000, priceUsd: 31, nextSlot: "Mañana, 10:00 AM", featured: true, bio: "Especialista en preparación técnica para entrevistas en big tech.", avatarTone: "from-tertiary-container to-tertiary" },
-  { id: 3, initials: "DM", name: "Prof. David Morales", credentials: "M.Sc. Física", university: "UCR", rating: 4.9, reviews: 115, subjects: ["Física I", "Física II", "Termodinámica", "Mecánica"], price: 12000, priceUsd: 23, nextSlot: "Jueves, 5:00 PM", featured: false, bio: "Profesor agregado UCR. Enfoque práctico con más de 500 estudiantes ayudados.", avatarTone: "from-secondary-container to-secondary" },
-  { id: 4, initials: "MV", name: "Dra. Marcela Vargas", credentials: "PhD Química", university: "UNA", rating: 4.95, reviews: 140, subjects: ["Química Orgánica", "Bioquímica", "Farmacología"], price: 15000, priceUsd: 29, nextSlot: "Viernes, 2:00 PM", featured: false, bio: "Investigadora postdoctoral. Especialista en química orgánica para carreras de salud.", avatarTone: "from-tertiary to-tertiary-container" },
-  { id: 5, initials: "JR", name: "M.Sc. Javier Rodríguez", credentials: "M.Sc. Economía", university: "TEC", rating: 4.85, reviews: 78, subjects: ["Econometría", "Microeconomía", "Macroeconomía", "Finanzas"], price: 13500, priceUsd: 26, nextSlot: "Mañana, 9:00 AM", featured: false, bio: "Economista senior con experiencia en organismos internacionales.", avatarTone: "from-secondary-fixed to-secondary-fixed-dim" },
-  { id: 6, initials: "LP", name: "Dra. Laura Prop", credentials: "PhD Biología", university: "UCR", rating: 4.92, reviews: 103, subjects: ["Biología Celular", "Genética", "Microbiología"], price: 14000, priceUsd: 27, nextSlot: "Hoy, 6:00 PM", featured: false, bio: "Docente-investigadora con énfasis en biología molecular y genética.", avatarTone: "from-primary-fixed to-primary-fixed-dim" },
-  { id: 7, initials: "AG", name: "Ing. Andrés González", credentials: "M.Sc. Ing. Eléctrica", university: "TEC", rating: 4.78, reviews: 56, subjects: ["Circuitos", "Electrónica", "Señales", "Control"], price: 13000, priceUsd: 25, nextSlot: "Miércoles, 4:00 PM", featured: false, bio: "Ingeniero electricista con Maestría en TEC. 6 años de experiencia.", avatarTone: "from-primary-container to-primary" },
-  { id: 8, initials: "CM", name: "Dra. Carolina Morales", credentials: "PhD Estadística", university: "UCR", rating: 4.88, reviews: 67, subjects: ["Estadística", "Probabilidad", "R", "Análisis de Datos"], price: 15500, priceUsd: 30, nextSlot: "Sábado, 11:00 AM", featured: false, bio: "Profesora jubilada UCR. 20 años en estadística aplicada.", avatarTone: "from-tertiary-fixed-dim to-tertiary-fixed" },
-  { id: 9, initials: "RF", name: "M.Sc. Ricardo Fernández", credentials: "M.Sc. Matemáticas", university: "UNA", rating: 4.97, reviews: 201, subjects: ["Cálculo III", "Variable Compleja", "Topología"], price: 12500, priceUsd: 24, nextSlot: "Hoy, 8:00 PM", featured: true, bio: "Matemático puro. Doctorado en vías. Dominio completo del cálculo avanzado.", avatarTone: "from-secondary to-secondary-container" },
-  { id: 10, initials: "MP", name: "M.Sc. María Pérez", credentials: "M.Sc. Lingüística", university: "UCR", rating: 4.93, reviews: 88, subjects: ["Inglés Académico", "TOEFL", "Redacción", "Español"], price: 11000, priceUsd: 21, nextSlot: "Domingo, 10:00 AM", featured: false, bio: "Preparadora certificada TOEFL. Metodología inmersiva con materiales auténticos.", avatarTone: "from-primary-fixed-dim to-primary-fixed" },
-  { id: 11, initials: "JT", name: "Dr. Jorge Torres", credentials: "PhD Física Médica", university: "TEC", rating: 4.81, reviews: 44, subjects: ["Física Médica", "Radiología", "Protección Radiológica"], price: 17000, priceUsd: 33, nextSlot: "Viernes, 9:00 AM", featured: false, bio: "Físico médico hospitalario. Prepara para exámenes de boards profesionales.", avatarTone: "from-tertiary-container to-tertiary" },
-  { id: 12, initials: "AS", name: "Ing. Ana Salas", credentials: "Ing. Civil", university: "TEC", rating: 4.76, reviews: 39, subjects: ["Estática", "Resistencia", "Hormigón", "Diseño Estructural"], price: 14000, priceUsd: 27, nextSlot: "Jueves, 3:00 PM", featured: false, bio: "Ingeniera civil con maestría en estructuras. Experiencia en proyecto y supervisión.", avatarTone: "from-secondary-container to-secondary-fixed-dim" },
-];
-
-type SortOption = "rating" | "price_asc" | "price_desc" | "reviews";
+import { useTutors } from "@/hooks/use-tutors";
+import { AVAILABILITIES, DEFAULT_FILTERS, LEVELS, RATINGS, UNIVERSITIES } from "@/lib/data/tutors";
+import { applySort } from "@/lib/filters";
+import type { FilterState, SortOption, Tutor } from "@/lib/types/tutor";
 
 export default function TutoresPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("rating");
 
-  const filtered = TUTORS.filter((t) => {
-    if (filters.query && !t.name.toLowerCase().includes(filters.query.toLowerCase()) && !t.subjects.some((s) => s.toLowerCase().includes(filters.query.toLowerCase()))) return false;
-    if (filters.university !== "Todas" && t.university !== filters.university) return false;
-    if (filters.minRating !== "Cualquiera") {
-      const min = parseFloat(filters.minRating);
-      if (t.rating < min) return false;
-    }
-    if (filters.priceMin > 0 && t.price < filters.priceMin) return false;
-    if (filters.priceMax < 25000 && t.price > filters.priceMax) return false;
-    return true;
-  }).sort((a, b) => {
-    if (sort === "rating") return b.rating - a.rating;
-    if (sort === "price_asc") return a.price - b.price;
-    if (sort === "price_desc") return b.price - a.price;
-    if (sort === "reviews") return b.reviews - a.reviews;
-    return 0;
+  // Datos reales del backend (GET /api/tutors) con debounce y abort automático.
+  const { state, reload } = useTutors({
+    query: filters.query || undefined,
+    university: filters.university,
+    minRating: filters.minRating === "Cualquiera" ? undefined : parseFloat(filters.minRating),
+    priceMin: filters.priceMin > 0 ? filters.priceMin : undefined,
+    priceMax: filters.priceMax < 25000 ? filters.priceMax : undefined,
+    page: 1,
+    pageSize: 12,
   });
+
+  // El orden es client-side sobre la página actual (contrato API sin cambios).
+  const tutors = state.status === "success" ? applySort(state.data.items, sort) : [];
+  const totalCount = state.status === "success" ? state.data.totalCount : 0;
+  const isLoading = state.status === "loading";
+  const isError = state.status === "error";
+  const isEmpty = state.status === "success" && tutors.length === 0;
 
   return (
     <>
@@ -97,7 +42,9 @@ export default function TutoresPage() {
                 Directorio de Tutores
               </h1>
               <p className="text-body-md text-on-surface-variant">
-                {filtered.length} tutores verificados disponibles para reserva inmediata
+                {isLoading
+                  ? "Buscando tutores verificados..."
+                  : `${totalCount} tutores verificados disponibles para reserva inmediata`}
               </p>
             </div>
             {/* Search Bar */}
@@ -125,7 +72,7 @@ export default function TutoresPage() {
             {/* Sort Bar */}
             <div className="mb-6 flex items-center justify-between gap-4">
               <p className="text-body-md text-on-surface-variant">
-                <span className="font-bold text-on-surface">{filtered.length}</span> resultados
+                <span className="font-bold text-on-surface">{totalCount}</span> resultados
               </p>
               <div className="flex items-center gap-2">
                 <label className="whitespace-nowrap text-label-md text-on-surface-variant">Ordenar por:</label>
@@ -143,14 +90,18 @@ export default function TutoresPage() {
             </div>
 
             {/* Tutor Grid */}
-            {filtered.length > 0 ? (
+            {isError ? (
+              <ErrorState error={state.error} onRetry={reload} />
+            ) : isLoading ? (
+              <LoadingGrid />
+            ) : isEmpty ? (
+              <EmptyState onClear={() => setFilters(DEFAULT_FILTERS)} />
+            ) : (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {filtered.map((tutor) => (
+                {tutors.map((tutor) => (
                   <TutorCard key={tutor.id} tutor={tutor} />
                 ))}
               </div>
-            ) : (
-              <EmptyState onClear={() => setFilters(DEFAULT_FILTERS)} />
             )}
           </div>
         </div>
@@ -309,13 +260,22 @@ function FilterSidebar({
 }
 
 function TutorCard({ tutor }: { tutor: Tutor }) {
+  // Iniciales derivadas del nombre (el backend no envía initials).
+  const initials = tutor.name
+    .replace(/^(Dr\.|Dra\.|Ing\.|Prof\.|M\.Sc\.)\s+/, "")
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
   return (
     <article className="group flex flex-col rounded-xl bg-surface-container-lowest shadow-sm transition-all hover:shadow-primary-card">
       <div className="flex flex-1 flex-col gap-4 p-5">
         {/* Header */}
         <div className="flex items-start gap-3.5">
-          <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${tutor.avatarTone} font-bold text-lg text-on-primary`}>
-            {tutor.initials}
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container font-bold text-lg text-on-primary">
+            {initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-1">
@@ -367,7 +327,7 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-outline-variant/40 p-4">
         <div>
-          <span className="text-headline-sm font-extrabold text-on-surface">₡{tutor.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</span>
+          <span className="text-headline-sm font-extrabold text-on-surface">₡{tutor.priceCrc.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</span>
           <span className="block text-label-sm text-on-surface-variant">/ hora (~${tutor.priceUsd})</span>
         </div>
         <button
@@ -397,6 +357,52 @@ function EmptyState({ onClear }: { onClear: () => void }) {
         className="rounded-lg bg-primary px-6 py-2.5 text-on-primary text-label-md font-semibold shadow-sm transition-colors hover:bg-on-primary-fixed-variant"
       >
         Limpiar todos los filtros
+      </button>
+    </div>
+  );
+}
+
+function LoadingGrid() {
+  return (
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-live="polite">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex flex-col gap-4 rounded-xl bg-surface-container-lowest p-5 shadow-sm"
+        >
+          <div className="flex items-start gap-3.5">
+            <div className="h-14 w-14 shrink-0 animate-pulse rounded-xl bg-surface-container" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-surface-container" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-surface-container" />
+            </div>
+          </div>
+          <div className="h-3 w-full animate-pulse rounded bg-surface-container" />
+          <div className="h-3 w-5/6 animate-pulse rounded bg-surface-container" />
+          <div className="flex gap-1.5">
+            <div className="h-5 w-20 animate-pulse rounded bg-surface-container" />
+            <div className="h-5 w-16 animate-pulse rounded bg-surface-container" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-error/30 bg-error-container/20 py-20 text-center">
+      <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-error-container">
+        <MaterialIcon name="cloud_off" className="text-[28px] text-on-error-container" />
+      </div>
+      <h3 className="mb-2 text-title-md font-bold text-on-surface">No se pudo cargar el directorio</h3>
+      <p className="mb-6 max-w-xs text-body-md text-on-surface-variant">{error}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="rounded-lg bg-primary px-6 py-2.5 text-on-primary text-label-md font-semibold shadow-sm transition-colors hover:bg-on-primary-fixed-variant"
+      >
+        Reintentar
       </button>
     </div>
   );

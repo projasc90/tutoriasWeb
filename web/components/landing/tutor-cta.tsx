@@ -44,7 +44,7 @@ export function TutorCta() {
               </div>
               <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
                 <a
-                  href="#"
+                  href="/postular"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-container px-8 py-4 text-on-primary text-title-md font-semibold shadow-lg transition-colors hover:bg-primary"
                 >
                   <span>Postular como Docente</span>

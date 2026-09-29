@@ -1,16 +1,21 @@
+"use client";
+
 import type { ReactNode } from "react";
 
 import { MaterialIcon } from "@/components/material-icon";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV_ITEMS = [
   { label: "Buscar Tutores", href: "#catalogo" },
   { label: "Cómo Funciona", href: "#como-funciona" },
   { label: "Materias Populares", href: "#disciplinas" },
   { label: "Para Universidades", href: "#" },
-  { label: "Conviértete en Tutor", href: "#ser-tutor" },
+  { label: "Conviértete en Tutor", href: "/postular" },
 ];
 
 export function SiteHeader() {
+  const { state, logout } = useAuth();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-6 px-6 py-4 lg:px-12">
@@ -31,12 +36,28 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-3">
           <CurrencyToggle />
-          <a
-            href="#"
-            className="hidden whitespace-nowrap sm:inline-flex items-center px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-semibold"
-          >
-            Iniciar Sesión
-          </a>
+          {state.status === "authenticated" ? (
+            <>
+              <span className="hidden items-center gap-1.5 whitespace-nowrap sm:inline-flex items-center px-3 py-2 text-on-surface-variant text-sm font-semibold">
+                <MaterialIcon name="account_circle" className="text-[20px] text-primary" />
+                Hola, {state.session.fullName.split(" ")[0]}
+              </span>
+              <button
+                type="button"
+                onClick={logout}
+                className="hidden whitespace-nowrap sm:inline-flex items-center px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-semibold"
+              >
+                Cerrar sesión
+              </button>
+            </>
+          ) : state.status === "anonymous" ? (
+            <a
+              href="/login"
+              className="hidden whitespace-nowrap sm:inline-flex items-center px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-semibold"
+            >
+              Iniciar Sesión
+            </a>
+          ) : null}
           <a
             href="#catalogo"
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-4 py-2 text-on-primary text-sm font-semibold hover:bg-on-primary-fixed-variant transition-colors shadow-sm"

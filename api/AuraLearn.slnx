@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/AuraLearn.Tests/AuraLearn.Tests.csproj" />
+  </Folder>
+  <Project Path="AuraLearn.Api/AuraLearn.Api.csproj" />
+  <Project Path="AuraLearn.Application/AuraLearn.Application.csproj" />
+  <Project Path="AuraLearn.Domain/AuraLearn.Domain.csproj" />
+  <Project Path="AuraLearn.Infrastructure/AuraLearn.Infrastructure.csproj" />
+</Solution>

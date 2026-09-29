@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { MaterialSymbols } from "@/components/material-icon";
+import { AuthProvider } from "@/hooks/use-auth";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-on-surface font-sans">
         <MaterialSymbols />
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

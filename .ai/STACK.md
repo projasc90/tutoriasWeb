@@ -28,11 +28,23 @@ Fuente: `web/package.json` (v0.1.0) y `web/components.json`.
 | eslint | ^9 | flat config (`web/eslint.config.mjs`) + `eslint-config-next` 16.3.6 |
 | @types/node | ^20 | |
 
-## Backend (`api/` — reservado, por definir)
+## Backend (`api/` — activo desde 2026-09-28, ADR-003)
 
-- .NET Core (C#) + Entity Framework Core + FluentValidation + JWT auth.
-- PostgreSQL como base de datos; migraciones EF en `api/Migrations/` con `dotnet ef`.
-- ⚠️ Al crear el proyecto, **actualizar este archivo** con versiones reales del `.csproj` y registrar ADR.
+Fuente: los `.csproj` reales de `api/`. .NET SDK **10.0.401** (target `net10.0`).
+
+| Componente | Versión | Ubicación |
+|------------|---------|-----------|
+| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | `AuraLearn.Infrastructure` |
+| Microsoft.EntityFrameworkCore.Design | 10.0.12 | `AuraLearn.Infrastructure` + `AuraLearn.Api` |
+| FluentValidation | 12.x | `AuraLearn.Application` |
+| FluentValidation.DependencyInjectionExtensions | 12.x | `AuraLearn.Api` |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 10.x | `AuraLearn.Api` |
+| Swashbuckle.AspNetCore | 10.x | `AuraLearn.Api` |
+| xUnit | (template net10.0) | `tests/AuraLearn.Tests` |
+
+- Migraciones EF en `AuraLearn.Infrastructure/Migrations/` con `dotnet ef` (tool global dotnet-ef 10.0.12).
+- BD local dev: PostgreSQL en `localhost:5432`, BD `auralearn_dev`, usuario `auralearn` (credenciales solo dev en `appsettings.Development.json`, ignorado por git).
+- Tooling: `dotnet ef migrations add ... --project AuraLearn.Infrastructure --startup-project AuraLearn.Api`.
 
 ## Infraestructura
 

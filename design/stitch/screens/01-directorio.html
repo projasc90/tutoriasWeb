@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-variant":"#d3e4fe","primary-container":"#4f46e5","surface-container-highest":"#d3e4fe","primary-fixed-dim":"#c3c0ff","inverse-on-surface":"#eaf1ff","inverse-primary":"#c3c0ff","on-surface-variant":"#464555","on-tertiary-fixed":"#2a1700","on-primary-fixed-variant":"#3323cc","surface-bright":"#f8f9ff","error":"#ba1a1a","on-secondary-fixed":"#131b2e","surface":"#f8f9ff","on-primary-container":"#dad7ff","tertiary-fixed":"#ffddb8","on-primary":"#ffffff","on-tertiary-container":"#ffd4a4","surface-container":"#e5eeff","primary-fixed":"#e2dfff","outline-variant":"#c7c4d8","surface-container-lowest":"#ffffff","on-error-container":"#93000a","secondary-fixed-dim":"#bec6e0","on-tertiary":"#ffffff","on-primary-fixed":"#0f0069","surface-container-low":"#eff4ff","tertiary":"#684000","on-secondary-container":"#5c647a","on-secondary":"#ffffff","on-background":"#0b1c30","inverse-surface":"#213145","surface-container-high":"#dce9ff","secondary":"#565e74","on-tertiary-fixed-variant":"#653e00","on-error":"#ffffff","secondary-fixed":"#dae2fd","secondary-container":"#dae2fd","outline":"#777587","tertiary-container":"#885500","primary":"#3525cd","on-secondary-fixed-variant":"#3f465c","background":"#f8f9ff","surface-tint":"#4d44e3","on-surface":"#0b1c30","surface-dim":"#cbdbf5","error-container":"#ffdad6","tertiary-fixed-dim":"#ffb95f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"margin-sm":"1rem","space-lg":"1.5rem","space-sm":"0.5rem","space-md":"1rem","margin":"2rem","gutter-sm":"1rem","space-xl":"2.5rem","space-xs":"0.25rem","gutter":"1.5rem"},fontFamily:{"body-lg":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"numeric-table":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-lg-mobile":["Plus Jakarta Sans"],"title-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"]},fontSize:{"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"700"}],"headline-lg":["32px",{lineHeight:"40px",letterSpacing:"-0.025em",fontWeight:"700"}],"numeric-table":["14px",{lineHeight:"20px",letterSpacing:"-0.01em",fontWeight:"600"}],"headline-md":["24px",{lineHeight:"32px",letterSpacing:"-0.02em",fontWeight:"700"}],"label-md":["13px",{lineHeight:"18px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg-mobile":["26px",{lineHeight:"34px",letterSpacing:"-0.02em",fontWeight:"700"}],"title-md":["16px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}],"display-lg":["40px",{lineHeight:"48px",letterSpacing:"-0.03em",fontWeight:"800"}],"headline-sm":["20px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-sm"><img alt="AuraLearn Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1ViIhwfVUW4sUjsv-nO3PTaJtC42JU0o2r0tlFHhtOhV4iyc4O69jW4FL-uUxkkdxzNsmI24Y2jb6t_tMnsNgad4rZiS_G5lTm0JpR_p59wZK-0SLEix4PwbZRzKvcQO21qJxDPVnetdXGSRD481fmJFJYlMCTwwhEH_-PILAvDGiBf8Qp5AoWQ5QZnzHwZ_P1JqkXqRXlDaaDH15KQJ8FVO62MUQVjL0SJcE8HUhyeCQrZge6ex31tte8"/><span class="font-headline-sm text-headline-sm tracking-tight font-bold text-on-surface">Aura<span class="text-primary">Learn</span></span></div><div class="hidden xl:flex items-center bg-surface-container-low px-space-md py-space-xs rounded-xl"><span class="material-symbols-outlined text-on-surface-variant text-[18px] mr-2">search</span><input class="bg-transparent border-none outline-none font-body-md text-body-md text-on-surface placeholder:text-outline w-56" placeholder="Materia, tutor o certificación..." type="text"/></div></div><nav class="hidden lg:flex items-center gap-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-label-md"><a aria-current="page" class="px-space-md py-space-xs rounded-lg transition-colors bg-primary-container text-on-primary-container font-label-md" data-path="buscar-tutores" href="#">Buscar Tutores</a><div class="relative flex items-center"><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="mis-tutorias" href="#">Mis Tutorías</a><span class="absolute -top-1 right-1 px-1.5 py-0.5 rounded-full bg-tertiary text-on-tertiary font-label-sm text-[10px] uppercase tracking-wider">En 2h</span></div><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="ser-profesor" href="#">Ser Profesor</a><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="disponibilidad-tutor" href="#">Disponibilidad (Tutor)</a></nav><div class="flex items-center gap-space-md shrink-0"><div class="hidden sm:flex items-center bg-surface-container-lowest p-0.5 rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.03)]"><button class="px-2 py-1 rounded font-numeric-table text-numeric-table text-primary font-bold bg-secondary-fixed/50">CRC ₡</button><button class="px-2 py-1 rounded font-numeric-table text-numeric-table text-on-surface-variant hover:text-on-surface">USD $</button></div><button aria-label="Soporte y Ayuda" class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[20px]">help</span></button><button aria-label="Notificaciones" class="relative w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-sm border-l border-surface-container-high"><div class="text-right hidden md:block"><p class="font-label-md text-label-md text-on-surface leading-tight">Valeria M.</p><span class="inline-block px-1.5 py-0.2 rounded bg-surface-container font-label-sm text-label-sm text-secondary">Estudiante</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9N4LB33-m8N7B_yBE3fqF8vqNM_kdkH1L6Rh6cM0BvMIxMu4z9BIS8FF63NqC8PId8oVuHqpwWB2xHPgl6pL1knRvftaKbn7aCs2miMPw2ik142I57gbDgkqCxQlk4a7qDqPZhpnPAoRdn5KKiaNQIQk5ZJj2Q-PWgqS1ZZ3vmcyyYUN4qw8c9-Ng7GS8S-d4qdRBHSSaKkdw8jk_uKIadRDr-P3FQmktU8F4XXoQkRjfneCr9EOfYg"/></div></div></div></header><main class="w-full pt-20 bg-surface min-h-[calc(100vh-280px)]"><div class="flex flex-col w-full">
+<!-- Interactive State / Filter Utility Script -->
+<script>
+    function updatePrice(val) {
+      const formatted = new Intl.NumberFormat('es-CR').format(val);
+      const usd = Math.round(val / 515);
+      document.getElementById('price-display').innerText = `₡${formatted} (~$${usd} USD)`;
+    }
+    function selectSlot(btn) {
+      const parent = btn.closest('.slots-container');
+      parent.querySelectorAll('.slot-btn').forEach(b => {
+        b.classList.remove('bg-primary-container', 'text-on-primary');
+        b.classList.add('bg-surface-container-low', 'text-on-surface');
+      });
+      btn.classList.remove('bg-surface-container-low', 'text-on-surface');
+      btn.classList.add('bg-primary-container', 'text-on-primary');
+    }
+  </script>
+<!-- Atmospheric Background Glow (Contained) -->
+<div class="relative w-full overflow-hidden">
+<div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
+<div class="absolute top-48 -right-32 w-[28rem] h-[28rem] rounded-full bg-secondary-fixed/30 blur-3xl pointer-events-none"></div>
+<!-- Top Breadcrumb & Live Stats Bar -->
+<div class="w-full max-w-7xl mx-auto px-6 lg:px-12 pt-6 pb-2">
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant">
+<span>Inicio</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-semibold">Directorio de Tutores Académicos</span>
+</div>
+<div class="flex items-center gap-space-md font-label-sm text-label-sm text-secondary">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> 48 tutores activos en línea</span>
+<span class="hidden sm:inline-block text-outline-variant">•</span>
+<span class="hidden sm:flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-tertiary">verified_user</span> Acreditación UCR / TEC / UNA</span>
+</div>
+</div>
+</div>
+<!-- Quick Search & Tag Suggestion Matrix Banner -->
+<section class="w-full max-w-7xl mx-auto px-6 lg:px-12 py-space-sm">
+<div class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-xl shadow-sm">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm items-center">
+<!-- Subject Query Input -->
+<div class="md:col-span-5 relative">
+<label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Materia o Especialidad</label>
+<div class="flex items-center bg-surface-container-low px-space-md py-2.5 rounded-lg">
+<span class="material-symbols-outlined text-primary text-[20px] mr-2">search</span>
+<input class="w-full bg-transparent border-none outline-none font-body-md text-body-md text-on-surface placeholder:text-outline" placeholder="Ej: Cálculo I, Bioquímica, Termodinámica..." type="text" value="Cálculo Diferencial e Integral"/>
+<span class="material-symbols-outlined text-outline text-[18px] cursor-pointer hover:text-on-surface">cancel</span>
+</div>
+</div>
+<!-- Academic Level Dropdown -->
+<div class="md:col-span-3">
+<label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Nivel Académico</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-low text-on-surface font-title-md text-title-md px-space-md py-2.5 rounded-lg border-none outline-none cursor-pointer">
+<option selected="">Universidad (Pregrado/Grado)</option>
+<option>Bachillerato Internacional (IB)</option>
+<option>Secundaria / Colegios Científicos</option>
+<option>Posgrado &amp; Maestría</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant pointer-events-none text-[20px]">expand_more</span>
+</div>
+</div>
+<!-- Day Preference Dropdown -->
+<div class="md:col-span-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Día de Clase</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-low text-on-surface font-title-md text-title-md px-space-md py-2.5 rounded-lg border-none outline-none cursor-pointer">
+<option>Cualquier día</option>
+<option selected="">Hoy (Mismo día)</option>
+<option>Mañana</option>
+<option>Este fin de semana</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant pointer-events-none text-[20px]">calendar_month</span>
+</div>
+</div>
+<!-- Action Button -->
+<div class="md:col-span-2 pt-2 md:pt-4">
+<button class="w-full h-11 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-space-xs transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span>Filtrar</span>
+</button>
+</div>
+</div>
+<!-- Quick Tag Suggestions -->
+<div class="mt-space-md pt-space-sm flex flex-wrap items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant mr-1">Búsquedas rápidas:</span>
+<button class="px-2.5 py-1 bg-surface-variant text-primary font-label-sm text-label-sm rounded-md transition-colors hover:bg-primary hover:text-on-primary">Cálculo I &amp; II</button>
+<button class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md hover:bg-surface-container transition-colors">Física Cuántica</button>
+<button class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md hover:bg-surface-container transition-colors">Programación Python</button>
+<button class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md hover:bg-surface-container transition-colors">Química Orgánica</button>
+<button class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md hover:bg-surface-container transition-colors">Inglés TOEFL / C1</button>
+<button class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md hover:bg-surface-container transition-colors">Álgebra Lineal</button>
+</div>
+</div>
+</section>
+<!-- Main Content Workspace: Left Sidebar + Right Feed -->
+<main class="w-full max-w-7xl mx-auto px-6 lg:px-12 py-space-md pb-space-xl">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- ==================== LEFT FILTER SIDEBAR (~280px / 3.5 cols) ==================== -->
+<aside class="lg:col-span-4 xl:col-span-3 space-y-space-md sticky top-24">
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Filtros</h2>
+</div>
+<button class="font-label-sm text-label-sm text-primary hover:underline">Reestablecer</button>
+</div>
+<div class="space-y-space-lg">
+<!-- Instant Toggles -->
+<div class="space-y-space-sm">
+<label class="flex items-center justify-between p-2.5 bg-surface-container-low rounded-lg cursor-pointer transition-colors hover:bg-surface-container">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+<span class="font-label-md text-label-md text-on-surface">Docente con Título Verificado</span>
+</span>
+<input checked="" class="w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-2.5 bg-surface-container-low rounded-lg cursor-pointer transition-colors hover:bg-surface-container">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-label-md text-label-md text-on-surface">Disponible Hoy Mismo</span>
+</span>
+<input checked="" class="w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox"/>
+</label>
+</div>
+<!-- Price Range Slider -->
+<div class="space-y-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Tarifa por Hora</span>
+<span class="font-numeric-table text-numeric-table text-primary font-bold" id="price-display">₡18,000 (~$35 USD)</span>
+</div>
+<input class="w-full accent-primary cursor-pointer" max="35000" min="8000" oninput="updatePrice(this.value)" step="1000" type="range" value="18000"/>
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>₡8,000 ($15)</span>
+<span>₡35,000 ($68)</span>
+</div>
+</div>
+<!-- Modalidad Selector -->
+<div class="space-y-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Modalidad de Enseñanza</span>
+<div class="grid grid-cols-3 gap-1 p-1 bg-surface-container-low rounded-lg">
+<button class="py-1.5 px-2 rounded-md bg-surface-container-lowest shadow-sm font-label-sm text-label-sm text-primary font-bold text-center">En línea</button>
+<button class="py-1.5 px-2 rounded-md font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface text-center">Presencial</button>
+<button class="py-1.5 px-2 rounded-md font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface text-center">Híbrido</button>
+</div>
+</div>
+<!-- Horarios de Disponibilidad -->
+<div class="space-y-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Franja Horaria</span>
+<div class="space-y-1.5">
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<span class="flex items-center gap-2">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span>Mañana (07:00 - 12:00)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">64 tutores</span>
+</label>
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<span class="flex items-center gap-2">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span>Tarde (12:00 - 18:00)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">92 tutores</span>
+</label>
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<span class="flex items-center gap-2">
+<input class="accent-primary rounded" type="checkbox"/>
+<span>Noche (18:00 - 22:00)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">41 tutores</span>
+</label>
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<span class="flex items-center gap-2">
+<input class="accent-primary rounded" type="checkbox"/>
+<span>Fines de Semana</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">55 tutores</span>
+</label>
+</div>
+</div>
+<!-- Calificación Mínima -->
+<div class="space-y-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Calificación Estudiantil</span>
+<div class="space-y-1.5">
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface cursor-pointer">
+<span class="flex items-center gap-2">
+<input checked="" class="accent-primary" name="rating_filter" type="radio"/>
+<span class="flex items-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star_half</span>
+</span>
+<span class="font-numeric-table text-numeric-table ml-1">4.8+</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">(98)</span>
+</label>
+<label class="flex items-center justify-between text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<span class="flex items-center gap-2">
+<input class="accent-primary" name="rating_filter" type="radio"/>
+<span class="flex items-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[18px]">star</span>
+</span>
+<span class="font-numeric-table text-numeric-table ml-1">4.5+</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary">(134)</span>
+</label>
+</div>
+</div>
+<!-- Idioma de Instrucción -->
+<div class="space-y-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Idioma de Sesión</span>
+<div class="space-y-1">
+<label class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span>Español (Nativo)</span>
+</label>
+<label class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span>Inglés (C1 / C2 Bilingüe)</span>
+</label>
+<label class="flex items-center gap-2 text-body-md font-body-md text-on-surface-variant cursor-pointer hover:text-on-surface">
+<input class="accent-primary rounded" type="checkbox"/>
+<span>Francés (Académico)</span>
+</label>
+</div>
+</div>
+<!-- SINPE Móvil Guarantee Callout -->
+<div class="p-space-sm bg-surface-container rounded-lg space-y-1">
+<div class="flex items-center gap-1.5 text-primary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+<span>Garantía de Sesión</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Los fondos se custodian en AuraLearn hasta finalizar la tutoría con 100% de conformidad.</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- ==================== RIGHT FEED SECTION (8.5 - 9 cols) ==================== -->
+<section class="lg:col-span-8 xl:col-span-9 space-y-space-md">
+<!-- Listing Header & Sorting -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-sm shadow-sm">
+<div>
+<div class="flex items-center gap-2">
+<h1 class="font-headline-md text-headline-md text-on-surface font-bold">142 Tutores Disponibles</h1>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm">Ciencias Exactas &amp; Matemáticas</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">Tutores verificados con pénsum alineado a universidades de Costa Rica y programas internacionales.</p>
+</div>
+<!-- Sort By Select -->
+<div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Ordenar:</span>
+<div class="relative">
+<select class="appearance-none bg-surface-container-low text-on-surface font-label-md text-label-md pl-3 pr-8 py-2 rounded-lg border-none outline-none cursor-pointer">
+<option selected="">Mejor Calificados</option>
+<option>Precio: Menor a Mayor</option>
+<option>Precio: Mayor a Menor</option>
+<option>Más Sesiones Impartidas</option>
+<option>Disponibilidad Próxima</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2 text-on-surface-variant pointer-events-none text-[18px]">arrow_drop_down</span>
+</div>
+</div>
+</div>
+<!-- ================= TUTOR CARD 1 ================= -->
+<article class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row gap-space-md">
+<!-- Left: Avatar & Accreditations -->
+<div class="flex md:flex-col items-center md:items-start gap-space-md shrink-0">
+<div class="relative">
+<img class="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover" data-alt="Portrait of Dr. Carlos Solano, a middle-aged male Costa Rican mathematics professor with glasses and a warm academic demeanor, wearing a navy cardigan in front of a whiteboard with calculus equations in soft studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzr9sTkmT8FPzd0I_IniFXuIJ3CtBd5ZSNJpr9FsEPg3Pgp-3kw3iwmE6y6_m5itc4hQmUcuy9TzyOnAfk7dyaHMcZtyjA2v6t4K_KOJSAGRFAeEgSxknu50pbpq_aWYDeEzini96HYadtAsNLIHh2WwrFelrjo3AqOpdW7eAM6JOWIwnH8NGzGZce7_6k2ffjr52Q3uu1e9K6YsX4Q07Y820jE_8cnsCsju81w-DnjCrJ6khsC-folg"/>
+<span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
+<span class="w-3.5 h-3.5 rounded-full bg-primary"></span>
+</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="inline-flex items-center gap-1 text-tertiary font-numeric-table text-numeric-table font-bold">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    4.98 <span class="font-normal text-on-surface-variant text-label-sm">(124 reseñas)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">380+ horas clase</span>
+</div>
+</div>
+<!-- Center: Details & Bio -->
+<div class="flex-1 min-w-0 space-y-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Dr. Carlos Solano</h3>
+<span class="px-2 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm">Tutor Destacado</span>
+<span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">school</span> Verificado UCR / TEC
+                  </span>
+</div>
+<p class="font-label-md text-label-md text-primary font-medium">Doctor en Ciencias Matemáticas • Docente Catedrático</p>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                  Especialista en Cálculo Diferencial, Álgebra Lineal y Modelado Matemático con 8+ años de experiencia docente. Metodología basada en resolución guiada de problemas tipo examen de UCR, TEC y bachillerato internacional.
+                </p>
+<!-- Subject Badges -->
+<div class="flex flex-wrap gap-1.5 pt-1">
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Cálculo I &amp; II</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Álgebra Lineal</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Ecuaciones Diferenciales</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Estadística Aplicada</span>
+</div>
+<!-- Instant 1-Click Slot Selector Bar -->
+<div class="mt-space-sm pt-space-xs">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-sm text-label-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bolt</span> Próximas horas disponibles hoy:
+                    </span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Zona: UTC-6 (Costa Rica)</span>
+</div>
+<div class="slots-container flex flex-wrap items-center gap-2">
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Hoy 4:00 PM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Hoy 5:30 PM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Mañana 9:00 AM</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right: Price & CTA Actions -->
+<div class="md:w-56 shrink-0 flex flex-col justify-between items-end md:pl-space-md md:border-l md:border-surface-container pt-3 md:pt-0">
+<div class="text-right w-full">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider block">Inversión por hora</span>
+<div class="font-display-lg text-[28px] leading-tight text-on-surface font-extrabold">₡14,500</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant font-medium">~$28 USD / hora</div>
+<div class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-primary">
+<span class="material-symbols-outlined text-[14px]">flash_on</span> Respuesta en &lt;15 min
+                  </div>
+</div>
+<div class="w-full space-y-2 mt-4 md:mt-0">
+<button class="w-full py-2.5 px-4 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all">
+<span>Reservar Tutoría</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+<button class="w-full py-2 px-4 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Mensaje</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- ================= TUTOR CARD 2 ================= -->
+<article class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row gap-space-md">
+<!-- Left: Avatar & Accreditations -->
+<div class="flex md:flex-col items-center md:items-start gap-space-md shrink-0">
+<div class="relative">
+<img class="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover" data-alt="Professional studio portrait of Ing. Sofia Hernandez, a young female software engineer and educator with glasses, confident smile, stylish professional dark blazer, modern architectural blur background with subtle purple accent lights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZIod5Yr0bcJe5wVedQyI1c_E14f3RydAsR7tKtG5gzXAA8dWae0qupgMWOkJVm5_Jj8K2RB-EzBXM55LGPCJMIp5QOl90H7NeaR1wIBGDH1TEMtFG18oZwBubG2N-kdHIBLHEBfLxV-66rRG6bMTozGXNBVvmW-l6Jf9SDwL3HPfUE015qpHqthV0-Mb3J21wSdVdrHSPLYsvvIuNhvjn63B6YttviOtkSUeV-8rylmLjJo_FSTgvNQ"/>
+<span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
+<span class="w-3.5 h-3.5 rounded-full bg-primary"></span>
+</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="inline-flex items-center gap-1 text-tertiary font-numeric-table text-numeric-table font-bold">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    5.0 <span class="font-normal text-on-surface-variant text-label-sm">(89 reseñas)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">240+ horas clase</span>
+</div>
+</div>
+<!-- Center: Details & Bio -->
+<div class="flex-1 min-w-0 space-y-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Ing. Sofía Hernández</h3>
+<span class="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">Top Calificada en Programación</span>
+<span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">verified</span> Ex-Amazon • Ing. Computación TEC
+                  </span>
+</div>
+<p class="font-label-md text-label-md text-primary font-medium">Ingeniera de Software &amp; Data Scientist</p>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                  Especialista en Python, Algoritmos, Estructuras de Datos y Fundamentos de Inteligencia Artificial. Preparación intensiva para cursos de programación universitaria (TEC, UCR, Cenfotec) y proyectos de grado.
+                </p>
+<!-- Subject Badges -->
+<div class="flex flex-wrap gap-1.5 pt-1">
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Python &amp; POO</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Estructuras de Datos</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">SQL &amp; Bases de Datos</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Data Science</span>
+</div>
+<!-- Instant 1-Click Slot Selector Bar -->
+<div class="mt-space-sm pt-space-xs">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-sm text-label-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bolt</span> Próximas horas disponibles:
+                    </span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Zona: UTC-6 (Costa Rica)</span>
+</div>
+<div class="slots-container flex flex-wrap items-center gap-2">
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Mañana 10:00 AM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Mañana 2:30 PM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Viernes 4:00 PM</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right: Price & CTA Actions -->
+<div class="md:w-56 shrink-0 flex flex-col justify-between items-end md:pl-space-md md:border-l md:border-surface-container pt-3 md:pt-0">
+<div class="text-right w-full">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider block">Inversión por hora</span>
+<div class="font-display-lg text-[28px] leading-tight text-on-surface font-extrabold">₡16,000</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant font-medium">~$31 USD / hora</div>
+<div class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-primary">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 100% Asistencia puntual
+                  </div>
+</div>
+<div class="w-full space-y-2 mt-4 md:mt-0">
+<button class="w-full py-2.5 px-4 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all">
+<span>Reservar Tutoría</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+<button class="w-full py-2 px-4 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Mensaje</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- ================= TUTOR CARD 3 ================= -->
+<article class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row gap-space-md">
+<!-- Left: Avatar & Accreditations -->
+<div class="flex md:flex-col items-center md:items-start gap-space-md shrink-0">
+<div class="relative">
+<img class="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover" data-alt="Warm and serious portrait of Prof. David Morales, Hispanic physics professor in his late 30s with short dark hair, blue collared shirt, sitting in a modern university laboratory with optics equipment blurred in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmBYvAfiBrwVwh4C_tofndQ_UrchZFseoSyhPTF9VKTEA9dF8letRjulx8OUekrQHUE1uw3raeLl4Lu9ml86aQOw28KZUjbeWBBBOsgKbhbMfObXB6KHbwiIwY72n7fptxk96o-IT3XpLVs4RJMDPPFuZKN5DRvy0YpUezwmaFsnayI4kOSLTkRmeuYRzdd4eodnky_CP67IG7_C6mDaewRfD0EUC5nLyk3anE4ROVCewpbHPEBdbPwQ"/>
+<span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
+<span class="w-3.5 h-3.5 rounded-full bg-primary"></span>
+</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="inline-flex items-center gap-1 text-tertiary font-numeric-table text-numeric-table font-bold">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    4.90 <span class="font-normal text-on-surface-variant text-label-sm">(67 reseñas)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">195 horas clase</span>
+</div>
+</div>
+<!-- Center: Details & Bio -->
+<div class="flex-1 min-w-0 space-y-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Prof. David Morales</h3>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm">Física Universitaria</span>
+<span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">school</span> M.Sc. Física UCR
+                  </span>
+</div>
+<p class="font-label-md text-label-md text-primary font-medium">Magíster en Física Pura • Ex-Tutor Cátedra de Física General</p>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                  Enfoque deductivo e intuitivo para superar Física General I, II y III. Mecánica Clásica, Electromagnetismo, Termodinámica y preparación intensiva para exámenes parciales con bancos de ítems resueltos.
+                </p>
+<!-- Subject Badges -->
+<div class="flex flex-wrap gap-1.5 pt-1">
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Física General I &amp; II</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Electromagnetismo</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Termodinámica</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Ondas y Óptica</span>
+</div>
+<!-- Instant 1-Click Slot Selector Bar -->
+<div class="mt-space-sm pt-space-xs">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-sm text-label-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bolt</span> Próximas horas disponibles:
+                    </span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Zona: UTC-6 (Costa Rica)</span>
+</div>
+<div class="slots-container flex flex-wrap items-center gap-2">
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Hoy 7:00 PM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Mañana 11:30 AM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Sábado 3:00 PM</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right: Price & CTA Actions -->
+<div class="md:w-56 shrink-0 flex flex-col justify-between items-end md:pl-space-md md:border-l md:border-surface-container pt-3 md:pt-0">
+<div class="text-right w-full">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider block">Inversión por hora</span>
+<div class="font-display-lg text-[28px] leading-tight text-on-surface font-extrabold">₡12,000</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant font-medium">~$23 USD / hora</div>
+<div class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-primary">
+<span class="material-symbols-outlined text-[14px]">videocam</span> Pizarra Digital HD
+                  </div>
+</div>
+<div class="w-full space-y-2 mt-4 md:mt-0">
+<button class="w-full py-2.5 px-4 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all">
+<span>Reservar Tutoría</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+<button class="w-full py-2 px-4 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Mensaje</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- ================= TUTOR CARD 4 ================= -->
+<article class="bg-surface-container-lowest p-space-md lg:p-space-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row gap-space-md">
+<!-- Left: Avatar & Accreditations -->
+<div class="flex md:flex-col items-center md:items-start gap-space-md shrink-0">
+<div class="relative">
+<img class="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover" data-alt="Portrait of Dra. Marcela Vargas, Hispanic chemist and university lecturer in a clean modern laboratory with glassware and molecular models in background, wearing white coat, smiling professionally with direct eye contact." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDI91w9ziI7g2Ffhf3Wetm0W0vFQZl98c31urDkKe3UvQI91_NhPiDlZUNQD9NclCJCVTxILso64TgFQj0qgYgWUU0JheY5DdJs3e9NdUkBV4ucxFHDuQ2f_TZVwxFk9JLUkdVTMZ1v7Y3XrDmXQ8YOF5ba4J54qfKWO-G0nJy-6S0k_buL7tYmHa4Nj1XMgAMQLFjssxKY6C1Nn7a6ZR-XT1VsYUx52DfJrNgeXH-xZ_w0Diz1xfj7g"/>
+<span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm">
+<span class="w-3.5 h-3.5 rounded-full bg-primary"></span>
+</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="inline-flex items-center gap-1 text-tertiary font-numeric-table text-numeric-table font-bold">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                    4.95 <span class="font-normal text-on-surface-variant text-label-sm">(91 reseñas)</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">310+ horas clase</span>
+</div>
+</div>
+<!-- Center: Details & Bio -->
+<div class="flex-1 min-w-0 space-y-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Dra. Marcela Vargas</h3>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-sm text-label-sm">Química Orgánica &amp; Bioquímica</span>
+<span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">school</span> Ph.D. Química UNA / UCR
+                  </span>
+</div>
+<p class="font-label-md text-label-md text-primary font-medium">Catedrática Universitaria • Área Salud y Ciencias Naturales</p>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                  Tutorías focalizadas para estudiantes de Medicina, Farmacia, Microbiología y Biología. Mecanismos de reacción orgánicos, estereoquímica y resolución sistemática de síntesis multietapa.
+                </p>
+<!-- Subject Badges -->
+<div class="flex flex-wrap gap-1.5 pt-1">
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Química Orgánica I &amp; II</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Bioquímica Médica</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Fisicoquímica</span>
+<span class="px-2.5 py-1 bg-surface-container-low text-on-surface font-label-sm text-label-sm rounded-md">Química General</span>
+</div>
+<!-- Instant 1-Click Slot Selector Bar -->
+<div class="mt-space-sm pt-space-xs">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label-sm text-label-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bolt</span> Próximas horas disponibles:
+                    </span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Zona: UTC-6 (Costa Rica)</span>
+</div>
+<div class="slots-container flex flex-wrap items-center gap-2">
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Hoy 6:30 PM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Mañana 8:00 AM</span>
+</button>
+<button class="slot-btn px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-numeric-table text-numeric-table font-semibold transition-colors flex items-center gap-1" onclick="selectSlot(this)">
+<span>Viernes 2:00 PM</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right: Price & CTA Actions -->
+<div class="md:w-56 shrink-0 flex flex-col justify-between items-end md:pl-space-md md:border-l md:border-surface-container pt-3 md:pt-0">
+<div class="text-right w-full">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider block">Inversión por hora</span>
+<div class="font-display-lg text-[28px] leading-tight text-on-surface font-extrabold">₡15,000</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant font-medium">~$29 USD / hora</div>
+<div class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-primary">
+<span class="material-symbols-outlined text-[14px]">download</span> Guías en PDF Incluidas
+                  </div>
+</div>
+<div class="w-full space-y-2 mt-4 md:mt-0">
+<button class="w-full py-2.5 px-4 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all">
+<span>Reservar Tutoría</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+<button class="w-full py-2 px-4 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Mensaje</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- ================= Bottom Pagination & Fast Assist ================= -->
+<div class="pt-space-md flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<p class="font-label-md text-label-md text-on-surface-variant">
+              Mostrando <span class="font-bold text-on-surface">1 - 4</span> de <span class="font-bold text-on-surface">142</span> tutores calificados
+            </p>
+<!-- Numeric Pagination -->
+<div class="flex items-center gap-1.5">
+<button class="w-9 h-9 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-primary text-on-primary font-numeric-table text-numeric-table font-bold flex items-center justify-center">1</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-numeric-table text-numeric-table font-semibold flex items-center justify-center transition-colors">2</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-numeric-table text-numeric-table font-semibold flex items-center justify-center transition-colors">3</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-numeric-table text-numeric-table font-semibold flex items-center justify-center transition-colors">4</button>
+<span class="px-1 text-on-surface-variant">...</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-numeric-table text-numeric-table font-semibold flex items-center justify-center transition-colors">12</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Academic Advisory Banner -->
+<div class="mt-space-lg bg-gradient-to-r from-primary to-primary-container p-space-md lg:p-space-lg rounded-xl text-on-primary flex flex-col md:flex-row items-center justify-between gap-space-md shadow-md">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[24px] text-tertiary-fixed">psychology</span>
+<h4 class="font-headline-sm text-headline-sm font-bold text-on-primary">¿No encuentras el horario o materia exacta?</h4>
+</div>
+<p class="font-body-md text-body-md text-on-primary-container max-w-xl">
+                Nuestro equipo académico coordina con directores de cátedra y profesores especializados para agendar sesiones personalizadas a tu temario en menos de 2 horas.
+              </p>
+</div>
+<button class="shrink-0 px-space-md py-2.5 bg-surface-container-lowest hover:bg-surface-bright text-primary font-label-md text-label-md rounded-lg shadow-sm transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">support_agent</span>
+<span>Solicitar Tutor a Medida</span>
+</button>
+</div>
+</section>
+</div>
+</main>
+</div>
+</div></main><footer class="w-full bg-surface-container-lowest py-space-xl"><div class="max-w-7xl mx-auto px-6 lg:px-12"><div class="grid grid-cols-1 md:grid-cols-4 gap-space-lg pb-space-lg"><div class="md:col-span-1"><div class="flex items-center gap-space-xs mb-space-sm"><span class="font-headline-sm text-headline-sm font-bold text-on-surface">Aura<span class="text-primary">Learn</span></span></div><p class="font-body-md text-body-md text-on-surface-variant mb-space-md">Plataforma de tutorías de alto rigor académico y coordinación horaria precisa en Costa Rica e internacionalmente.</p><div class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span>SINPE Móvil &amp; Pasarelas Verificadas</div></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Plataforma</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Buscar Tutores</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Agendar Clases</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Calculadora SINPE</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Garantía de Satisfacción</a></li></ul></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Tutores</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Postular como Docente</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Matriz de Disponibilidad</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Estándares Académicos</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Políticas de Cobro</a></li></ul></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Soporte</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Centro de Ayuda</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Reportar Incidencias</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Términos del Servicio</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Privacidad</a></li></ul></div></div><div class="pt-space-md flex flex-col md:flex-row items-center justify-between gap-space-sm text-on-surface-variant font-label-sm text-label-sm"><p>© 2025 AuraLearn Inc. Todos los derechos reservados. San José, Costa Rica.</p><div class="flex items-center gap-space-md"><span>Seguridad SSL 256-Bit</span><span>Protocolo Anti-Plagio Certificado</span></div></div></div></footer></body></html>

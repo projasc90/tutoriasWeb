@@ -22,29 +22,61 @@ public class TutorSearchCriteriaValidator : AbstractValidator<TutorSearchCriteri
 /// <summary>
 /// Caso de uso: búsqueda del catálogo de tutores. Solo expone tutores
 /// <c>Verified</c> (regla de negocio: el catálogo público nunca muestra
-/// tutores sin verificar).
+/// tutores sin verificar). Reemplaza el array DemoSlots por slots reales.
 /// </summary>
-public class TutorService(ITutorRepository repository)
+public class TutorService(
+    ITutorRepository repository,
+    ISlotRepository slotRepository,
+    SlotAvailabilityService slotAvailability)
 {
-    /// <summary>Próximo cupo presentacional (mock hasta que exista el motor de slots).</summary>
-    private static readonly string[] DemoSlots =
-    [
-        "Hoy, 3:30 PM", "Mañana, 10:00 AM", "Jueves, 5:00 PM", "Viernes, 2:00 PM",
-        "Mañana, 9:00 AM", "Hoy, 6:00 PM", "Miércoles, 4:00 PM", "Sábado, 11:00 AM",
-        "Hoy, 8:00 PM", "Domingo, 10:00 AM", "Viernes, 9:00 AM", "Jueves, 3:00 PM",
-    ];
-
     public async Task<PagedResult<TutorDto>> SearchAsync(TutorSearchCriteria criteria, CancellationToken ct)
     {
         var (items, totalCount) = await repository.SearchAsync(criteria, ct);
 
+        // Ensure-ahead + próximo slot disponible para los tutores de esta página
+        var tutorIds = items.Select(t => t.Id).ToList();
+        var now = DateTime.UtcNow;
+        var twoWeeksLater = now.AddDays(14);
+        var slotsMap = new Dictionary<Guid, DateTime?>();
+
+        if (tutorIds.Count > 0)
+        {
+            var slots = await slotAvailability.EnsureAheadAsync(tutorIds, now, twoWeeksLater, ct);
+            slotsMap = slots
+                .GroupBy(s => s.TutorId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Where(s => s.StartAt > now)
+                          .OrderBy(s => s.StartAt)
+                          .FirstOrDefault()?.StartAt);
+        }
+
         var dtos = items
-            .Select((t, i) => new TutorDto(
+            .Select(t => new TutorDto(
                 t.Id, t.Name, t.Credentials, t.University, t.Rating, t.Reviews,
                 t.Subjects, t.PriceCrc, t.PriceUsd, t.Bio, t.Featured,
-                NextSlot: DemoSlots[i % DemoSlots.Length]))
+                slotsMap.TryGetValue(t.Id, out var ns) ? ns : null))
             .ToList();
 
         return new PagedResult<TutorDto>(dtos, criteria.Page, criteria.PageSize, totalCount);
+    }
+
+    /// <summary>
+    /// Detalle de un tutor para la página de perfil /tutores/[id].
+    /// </summary>
+    public async Task<TutorDto?> GetByIdAsync(Guid id, CancellationToken ct)
+    {
+        var tutor = await repository.GetByIdAsync(id, ct);
+        if (tutor is null) return null;
+
+        // Ensure-ahead para que el perfil tenga slots reservables en los próximos 14 días
+        var now = DateTime.UtcNow;
+        await slotAvailability.EnsureAheadAsync([id], now, now.AddDays(14), ct);
+        var nextSlot = await slotRepository.GetNextAvailableStartAsync(id, now, ct);
+        return new TutorDto(
+            tutor.Id, tutor.Name, tutor.Credentials, tutor.University,
+            tutor.Rating, tutor.Reviews, tutor.Subjects,
+            tutor.PriceCrc, tutor.PriceUsd, tutor.Bio, tutor.Featured,
+            nextSlot);
     }
 }

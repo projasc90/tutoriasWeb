@@ -24,7 +24,7 @@ maxLines: 100
 | **Reserva** | Operación que bloquea un slot, valida pago y confirma la sesión. |
 | **Pizarra digital** | Lienzo colaborativo en tiempo real durante la sesión. |
 | **Garantía 15'** | Si en los primeros 15 minutos el enfoque no encaja, se reasigna o reembolsa. |
-| **Reprogramación** | Cambio de horario sin penalización con ≥12 h de anticipación. |
+| **Reprogramación** | Cambio de horario implementado como cancelar + crear nueva reserva (decisión 2026-10-01): sin PATCH reschedule para no desincronizar el comprobante pagado. Con ≥12 h de anticipación la cancelación acredita el monedero. |
 | **Monedero** | Saldo acreditado en la cuenta del estudiante tras cancelaciones. |
 | **Institución** | Universidad de procedencia: UCR, TEC, UNA, LEAD (y extendedas: ULACIT, U Latina). |
 | **Nivel académico** | Grado, Bachillerato Internacional (IB), Examen de Admisión (PAA), Posgrado. |

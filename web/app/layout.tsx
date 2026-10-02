@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { MaterialSymbols } from "@/components/material-icon";
 import { AuthProvider } from "@/hooks/use-auth";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-sans",
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+// Cifras tabulares/mono para horarios, códigos y montos (₡/$) del spec tipográfico.
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-numeric",
+  subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -29,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${plusJakartaSans.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-on-surface font-sans">
         <MaterialSymbols />

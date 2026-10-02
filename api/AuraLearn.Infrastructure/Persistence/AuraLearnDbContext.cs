@@ -16,6 +16,10 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
             w.Ignore(RelationalEventId.PendingModelChangesWarning));
     public DbSet<Tutor> Tutors => Set<Tutor>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Slot> Slots => Set<Slot>();
+    public DbSet<Reservation> Reservations => Set<Reservation>();
+    public DbSet<WalletEntry> WalletEntries => Set<WalletEntry>();
+    public DbSet<TutorAvailability> TutorAvailability => Set<TutorAvailability>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +87,129 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
                 new Tutor { Id = Guid.Parse("3f2504e0-4f89-11d3-9a0c-0305e82c3311"), Name = "Dr. Jorge Torres", Credentials = "PhD Física Médica", University = "TEC", Rating = 4.81m, Reviews = 44, Subjects = ["Física Médica", "Radiología", "Protección Radiológica"], PriceCrc = 17000, PriceUsd = 33, Bio = "Físico médico hospitalario. Prepara para exámenes de boards profesionales.", Featured = false, VerificationStatus = VerificationStatus.Verified, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
                 new Tutor { Id = Guid.Parse("3f2504e0-4f89-11d3-9a0c-0305e82c3312"), Name = "Ing. Ana Salas", Credentials = "Ing. Civil", University = "TEC", Rating = 4.76m, Reviews = 39, Subjects = ["Estática", "Resistencia", "Hormigón", "Diseño Estructural"], PriceCrc = 14000, PriceUsd = 27, Bio = "Ingeniera civil con maestría en estructuras. Experiencia en proyecto y supervisión.", Featured = false, VerificationStatus = VerificationStatus.Verified, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
             );
+        });
+
+        modelBuilder.Entity<Slot>(entity =>
+        {
+            entity.ToTable("slots");
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.Id).HasColumnName("id");
+            entity.Property(s => s.TutorId).HasColumnName("tutor_id");
+            entity.Property(s => s.StartAt).HasColumnName("start_at");
+            entity.Property(s => s.EndAt).HasColumnName("end_at");
+
+            // Un tutor no puede tener dos slots que empiezan a la misma hora.
+            // El índice único (tutor_id, start_at) también sirve las consultas de
+            // disponibilidad por prefijo izquierdo: no se duplica un índice no-único.
+            entity.HasIndex(s => new { s.TutorId, s.StartAt }).IsUnique().HasDatabaseName("ux_slots_tutor_start");
+
+            entity.HasOne(t => t.Tutor)
+                .WithMany()
+                .HasForeignKey(s => s.TutorId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_slots_tutors_tutor_id");
+        });
+
+        modelBuilder.Entity<Reservation>(entity =>
+        {
+            entity.ToTable("reservations");
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.Id).HasColumnName("id");
+            entity.Property(r => r.SlotId).HasColumnName("slot_id");
+            entity.Property(r => r.StudentId).HasColumnName("student_id");
+            entity.Property(r => r.Status).HasColumnName("status");
+            entity.Property(r => r.PriceCrc).HasColumnName("price_crc");
+            entity.Property(r => r.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100).IsRequired();
+            entity.Property(r => r.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(r => r.ConfirmationNumber).HasColumnName("confirmation_number").HasMaxLength(100);
+            entity.Property(r => r.ComprobanteAmountCrc).HasColumnName("comprobante_amount_crc");
+            entity.Property(r => r.ComprobantePhone).HasColumnName("comprobante_phone").HasMaxLength(20);
+            entity.Property(r => r.ComprobanteSubmittedAt).HasColumnName("comprobante_submitted_at");
+            entity.Property(r => r.DecisionReason).HasColumnName("decision_reason").HasMaxLength(500);
+            entity.Property(r => r.ConfirmedAt).HasColumnName("confirmed_at");
+            entity.Property(r => r.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(r => r.CreatedAt).HasColumnName("created_at");
+
+            // Invariante: un nº de confirmación SINPE es irrepetible (idempotencia de acreditación)
+            entity.HasIndex(r => r.ConfirmationNumber).IsUnique().HasDatabaseName("ux_reservations_confirmation_number");
+
+            // Invariante: idempotencia de creación por request del cliente
+            entity.HasIndex(r => r.IdempotencyKey).IsUnique().HasDatabaseName("ux_reservations_idempotency_key");
+
+            // GUARDIÁN DE EXCLUSIVIDAD: un slot solo puede tener UNA reserva activa.
+            // Índice único parcial (PostgreSQL) filtrado por los estados que bloquean el slot.
+            entity.HasIndex(r => r.SlotId)
+                .IsUnique()
+                .HasDatabaseName("ux_reservations_active_slot")
+                .HasFilter("status IN (1, 2)");
+
+            // Índice de consultas por estudiante (panel /mis-tutorias)
+            entity.HasIndex(r => new { r.StudentId, r.CreatedAt }).HasDatabaseName("ix_reservations_student_created");
+
+            entity.HasOne(r => r.Slot)
+                .WithMany()
+                .HasForeignKey(r => r.SlotId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_reservations_slots_slot_id");
+
+            entity.HasOne(r => r.Student)
+                .WithMany()
+                .HasForeignKey(r => r.StudentId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_reservations_users_student_id");
+        });
+
+        modelBuilder.Entity<WalletEntry>(entity =>
+        {
+            entity.ToTable("wallet_entries");
+            entity.HasKey(w => w.Id);
+
+            entity.Property(w => w.Id).HasColumnName("id");
+            entity.Property(w => w.UserId).HasColumnName("user_id");
+            entity.Property(w => w.AmountCrc).HasColumnName("amount_crc");
+            entity.Property(w => w.Reason).HasColumnName("reason");
+            entity.Property(w => w.ReservationId).HasColumnName("reservation_id");
+            entity.Property(w => w.CreatedAt).HasColumnName("created_at");
+
+            entity.HasOne(w => w.User)
+                .WithMany()
+                .HasForeignKey(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_wallet_entries_users_user_id");
+
+            entity.HasOne<Reservation>()
+                .WithMany()
+                .HasForeignKey(w => w.ReservationId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_wallet_entries_reservations_reservation_id");
+
+            // Índice de consulta de saldo por usuario
+            entity.HasIndex(w => new { w.UserId, w.CreatedAt }).HasDatabaseName("ix_wallet_entries_user_created");
+        });
+
+        modelBuilder.Entity<TutorAvailability>(entity =>
+        {
+            entity.ToTable("tutor_availability");
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.Id).HasColumnName("id");
+            entity.Property(a => a.TutorId).HasColumnName("tutor_id");
+            entity.Property(a => a.Weekday).HasColumnName("weekday");
+            entity.Property(a => a.StartLocal).HasColumnName("start_local").HasColumnType("time without time zone");
+            entity.Property(a => a.EndLocal).HasColumnName("end_local").HasColumnType("time without time zone");
+
+            // Invariante: la misma franja no se duplica para el mismo tutor y día
+            entity.HasIndex(a => new { a.TutorId, a.Weekday, a.StartLocal })
+                .IsUnique()
+                .HasDatabaseName("ux_tutor_availability_tutor_weekday_start");
+
+            entity.HasOne(a => a.Tutor)
+                .WithMany()
+                .HasForeignKey(a => a.TutorId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_tutor_availability_tutors_tutor_id");
         });
     }
 }

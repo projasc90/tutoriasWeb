@@ -16,7 +16,8 @@ export type Tutor = {
   subjects: string[];
   priceCrc: number; // CRC
   priceUsd: number; // USD
-  nextSlot: string;
+  /** Próximo cupo disponible en UTC (ISO 8601). Formateo a zona CR en presentación. */
+  nextSlotAt: string | null;
   featured: boolean;
   bio: string;
 };

@@ -1,6 +1,10 @@
 namespace AuraLearn.Application.Dto;
 
-/// <summary>DTO de tutor para el catálogo público (contrato con el frontend).</summary>
+/// <summary>
+/// DTO de tutor para el catálogo público (contrato con el frontend).
+/// NextSlotAt: próximo slot disponible en UTC (null si no hay slots).
+/// El frontend formatea a la zona CR usando Intl + America/Costa_Rica.
+/// </summary>
 public record TutorDto(
     Guid Id,
     string Name,
@@ -13,7 +17,7 @@ public record TutorDto(
     int PriceUsd,
     string Bio,
     bool Featured,
-    string NextSlot);
+    DateTime? NextSlotAt);
 
 /// <summary>Resultado paginado genérico.</summary>
 public record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

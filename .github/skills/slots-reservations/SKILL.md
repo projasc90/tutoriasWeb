@@ -34,13 +34,19 @@ PENDING_PAYMENT → CONFIRMED → IN_PROGRESS → COMPLETED
 - Transiciones válidas centralizadas en un único lugar (máquina de estados en `Domain` o `Application`), con tests por transición.
 - Fechas en UTC en BD; conversión a zona (America/Costa_Rica) solo en la capa de presentación/contrato.
 
-### API sugerida
+### API del repo (vigente)
 ```
-GET   /api/tutors/{id}/slots?from=&to=     → slots disponibles
-POST  /api/reservations                    → reserva (409 si slot tomado)
-PATCH /api/reservations/{id}/reschedule    → reprogramación (422 si <12h)
-PATCH /api/reservations/{id}/cancel        → cancelación (saldo a monedero)
+GET   /api/tutors/{id}/slots?from=&to=     → slots disponibles (ensure-ahead ADR-005)
+GET   /api/tutors/{id}                     → detalle público
+POST  /api/reservations                    → reserva (409 si slot tomado; useWalletBalance opcional, ADR-006)
+POST  /api/reservations/{id}/comprobante   → comprobante SINPE (202; valida monto/receptor/ventana)
+PATCH /api/reservations/{id}/cancel        → cancelación (≥12 h Confirmed → monedero)
+PATCH /api/reservations/{id}/complete      → cierre por el tutor (liquidación, EndAt <= now)
+PATCH /api/admin/payments/{id}             → decisión Admin (approve/reject)
+GET   /api/wallet                          → saldo (estudiante o tutor)
 ```
+
+**Reprogramación = cancelar + crear nueva** (decisión 2026-10-01): NO existe PATCH reschedule. La UI de /mis-tutorias ofrece "Reprogramar" que cancela (acreditando monedero si aplica) y navega al perfil del tutor para elegir nuevo horario. Razón: un reschedule in-place desincroniza el comprobante pagado (el nº de confirmación apunta a la reserva vieja).
 
 ## Anti-patrones
 - Chequear disponibilidad solo en el frontend o con `SELECT` + `INSERT` sin constraint único.

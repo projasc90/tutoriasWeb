@@ -42,3 +42,19 @@
 - **Causa:** `dotnet add package Microsoft.EntityFrameworkCore.Design` en Infrastructure trajo EF 10.0.12 transitivamente, mientras Api referenciaba EF 10.0.4 (versión base del runtime .NET 10.0.401).
 - **Solución:** alinear las versiones añadiendo el mismo paquete `Microsoft.EntityFrameworkCore.Design 10.0.12` (con `PrivateAssets=all`) al proyecto Api, o fijar explícitamente la misma versión de EF en todos los csproj que la usen.
 - **Contexto:** 2026-09-28 — durante el scaffold.
+
+## ERR-BE-005 — Ciclo remove→add de migraciones deja la migración vacía (EF 10)
+
+- **Nombre:** migración `add` tras `remove` contiene solo `UpdateData` del seed (sin `CreateTable`/`CreateIndex`)
+- **Síntoma:** el archivo `*_AddSlotsAndReservations.cs` (188 líneas) no tiene ninguna `CreateTable`; la BD migra pero no crea tablas. Además `dotnet ef migrations remove` reporta `Done` sin borrar los archivos `.cs`/`.Designer.cs`.
+- **Causa:** en EF 10.0.12, `migrations remove` revierte el snapshot pero a veces no elimina los archivos; el siguiente `add` parte del snapshot ya revertido y solo genera el diff de datos seed. Combinado con `remove --force` sobre una migración ya aplicada, se producen residuos.
+- **Solución:** ciclo canónico: (1) `dotnet ef migrations remove --force`; (2) verificar con `ls` que no queden archivos de la migración — borrar manualmente los residuos; (3) `git checkout -- *ModelSnapshot.cs` solo si el remove corrompió el snapshot; (4) un único `migrations add`; (5) auditar el archivo con `grep -c CreateTable` + índices esperados ANTES de `database update`. Nunca asumir que `Done` = archivos limpiados.
+- **Contexto:** 2026-10-01 — regeneración de `AddSlotsAndReservations` (Fase 0 del cierre de reservas); docenas de ciclos residuales depurados.
+
+## ERR-BE-006 — ExecuteDelete de slots viola FK de reservas terminales (23503)
+
+- **Nombre:** `NpgsqlException 23503: update or delete on table "slots" violates foreign key constraint "fk_reservations_slots_slot_id"`
+- **Síntoma:** `GET /api/tutors/{id}/slots` responde 500 tras definir franjas de disponibilidad (la purga del ensure-ahead borra slots fuera de franjas).
+- **Causa:** la FK `reservations → slots` es `onDelete: Restrict`; el filtro de purga excluía solo los slots con reserva **activa** (status IN (1,2)), pero los slots con reserva **terminal** (Expired/Cancelled/Rejected) también referencian el slot y bloquean el `DELETE`.
+- **Solución:** la purga solo elimina slots **sin ninguna reserva** (ni activa ni terminal): `Except(slotsConReserva)` sin filtrar status. El historial se conserva (auditoría); un slot con reservas termina de existir lógicamente — deja de ser reservable porque las terminales no bloquean, y el horario futuro lo repueblan las franjas del generador.
+- **Contexto:** 2026-10-01 — smoke del honoring (Fase 4 del cierre de reservas); detectado al probar la UI con el API levantado.

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-variant":"#d3e4fe","primary-container":"#4f46e5","surface-container-highest":"#d3e4fe","primary-fixed-dim":"#c3c0ff","inverse-on-surface":"#eaf1ff","inverse-primary":"#c3c0ff","on-surface-variant":"#464555","on-tertiary-fixed":"#2a1700","on-primary-fixed-variant":"#3323cc","surface-bright":"#f8f9ff","error":"#ba1a1a","on-secondary-fixed":"#131b2e","surface":"#f8f9ff","on-primary-container":"#dad7ff","tertiary-fixed":"#ffddb8","on-primary":"#ffffff","on-tertiary-container":"#ffd4a4","surface-container":"#e5eeff","primary-fixed":"#e2dfff","outline-variant":"#c7c4d8","surface-container-lowest":"#ffffff","on-error-container":"#93000a","secondary-fixed-dim":"#bec6e0","on-tertiary":"#ffffff","on-primary-fixed":"#0f0069","surface-container-low":"#eff4ff","tertiary":"#684000","on-secondary-container":"#5c647a","on-secondary":"#ffffff","on-background":"#0b1c30","inverse-surface":"#213145","surface-container-high":"#dce9ff","secondary":"#565e74","on-tertiary-fixed-variant":"#653e00","on-error":"#ffffff","secondary-fixed":"#dae2fd","secondary-container":"#dae2fd","outline":"#777587","tertiary-container":"#885500","primary":"#3525cd","on-secondary-fixed-variant":"#3f465c","background":"#f8f9ff","surface-tint":"#4d44e3","on-surface":"#0b1c30","surface-dim":"#cbdbf5","error-container":"#ffdad6","tertiary-fixed-dim":"#ffb95f"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"margin-sm":"1rem","space-lg":"1.5rem","space-sm":"0.5rem","space-md":"1rem","margin":"2rem","gutter-sm":"1rem","space-xl":"2.5rem","space-xs":"0.25rem","gutter":"1.5rem"},fontFamily:{"body-lg":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"numeric-table":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"headline-lg-mobile":["Plus Jakarta Sans"],"title-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"]},fontSize:{"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"700"}],"headline-lg":["32px",{lineHeight:"40px",letterSpacing:"-0.025em",fontWeight:"700"}],"numeric-table":["14px",{lineHeight:"20px",letterSpacing:"-0.01em",fontWeight:"600"}],"headline-md":["24px",{lineHeight:"32px",letterSpacing:"-0.02em",fontWeight:"700"}],"label-md":["13px",{lineHeight:"18px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg-mobile":["26px",{lineHeight:"34px",letterSpacing:"-0.02em",fontWeight:"700"}],"title-md":["16px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}],"display-lg":["40px",{lineHeight:"48px",letterSpacing:"-0.03em",fontWeight:"800"}],"headline-sm":["20px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-sm"><img alt="AuraLearn Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1ViIhwfVUW4sUjsv-nO3PTaJtC42JU0o2r0tlFHhtOhV4iyc4O69jW4FL-uUxkkdxzNsmI24Y2jb6t_tMnsNgad4rZiS_G5lTm0JpR_p59wZK-0SLEix4PwbZRzKvcQO21qJxDPVnetdXGSRD481fmJFJYlMCTwwhEH_-PILAvDGiBf8Qp5AoWQ5QZnzHwZ_P1JqkXqRXlDaaDH15KQJ8FVO62MUQVjL0SJcE8HUhyeCQrZge6ex31tte8"/><span class="font-headline-sm text-headline-sm tracking-tight font-bold text-on-surface">Aura<span class="text-primary">Learn</span></span></div><div class="hidden xl:flex items-center bg-surface-container-low px-space-md py-space-xs rounded-xl"><span class="material-symbols-outlined text-on-surface-variant text-[18px] mr-2">search</span><input class="bg-transparent border-none outline-none font-body-md text-body-md text-on-surface placeholder:text-outline w-56" placeholder="Materia, tutor o certificación..." type="text"/></div></div><nav class="hidden lg:flex items-center gap-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-label-md"><a aria-current="page" class="px-space-md py-space-xs rounded-lg transition-colors bg-primary-container text-on-primary-container font-label-md" data-path="buscar-tutores" href="#">Buscar Tutores</a><div class="relative flex items-center"><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="mis-tutorias" href="#">Mis Tutorías</a><span class="absolute -top-1 right-1 px-1.5 py-0.5 rounded-full bg-tertiary text-on-tertiary font-label-sm text-[10px] uppercase tracking-wider">En 2h</span></div><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="ser-profesor" href="#">Ser Profesor</a><a class="px-space-md py-space-xs rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" data-path="disponibilidad-tutor" href="#">Disponibilidad (Tutor)</a></nav><div class="flex items-center gap-space-md shrink-0"><div class="hidden sm:flex items-center bg-surface-container-lowest p-0.5 rounded-lg shadow-[0_1px_4px_rgba(0,0,0,0.03)]"><button class="px-2 py-1 rounded font-numeric-table text-numeric-table text-primary font-bold bg-secondary-fixed/50">CRC ₡</button><button class="px-2 py-1 rounded font-numeric-table text-numeric-table text-on-surface-variant hover:text-on-surface">USD $</button></div><button aria-label="Soporte y Ayuda" class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[20px]">help</span></button><button aria-label="Notificaciones" class="relative w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span></button><div class="flex items-center gap-space-sm pl-space-sm border-l border-surface-container-high"><div class="text-right hidden md:block"><p class="font-label-md text-label-md text-on-surface leading-tight">Valeria M.</p><span class="inline-block px-1.5 py-0.2 rounded bg-surface-container font-label-sm text-label-sm text-secondary">Estudiante</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9N4LB33-m8N7B_yBE3fqF8vqNM_kdkH1L6Rh6cM0BvMIxMu4z9BIS8FF63NqC8PId8oVuHqpwWB2xHPgl6pL1knRvftaKbn7aCs2miMPw2ik142I57gbDgkqCxQlk4a7qDqPZhpnPAoRdn5KKiaNQIQk5ZJj2Q-PWgqS1ZZ3vmcyyYUN4qw8c9-Ng7GS8S-d4qdRBHSSaKkdw8jk_uKIadRDr-P3FQmktU8F4XXoQkRjfneCr9EOfYg"/></div></div></div></header><main class="w-full pt-20 bg-surface min-h-[calc(100vh-280px)]"><div class="flex flex-col w-full">
+<div class="max-w-7xl mx-auto px-6 lg:px-12 py-space-lg w-full">
+<!-- Stepper Navigation -->
+<div class="flex items-center justify-between gap-space-sm mb-space-lg bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-surface-container text-secondary flex items-center justify-center font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">check</span>
+</span>
+<span class="font-label-md text-label-md text-on-surface-variant hidden sm:inline">1. Selección de horario</span>
+<span class="font-label-md text-label-md text-on-surface-variant sm:hidden">1. Horario</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">chevron_right</span>
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-sm text-label-sm">2</span>
+<span class="font-label-md text-label-md text-primary font-bold">2. Pago &amp; Facturación</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">chevron_right</span>
+<div class="flex items-center gap-2 opacity-50">
+<span class="w-6 h-6 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-label-sm text-label-sm">3</span>
+<span class="font-label-md text-label-md text-on-surface-variant hidden sm:inline">3. Confirmación</span>
+<span class="font-label-md text-label-md text-on-surface-variant sm:hidden">3. Listo</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="hidden md:inline">Sesión Segura</span>
+<span>SSL 256-bit</span>
+</div>
+</div>
+<!-- Alert / Timer Banner -->
+<div class="mb-space-lg rounded-xl bg-tertiary-fixed text-on-tertiary-fixed p-space-md flex items-center justify-between shadow-sm relative overflow-hidden">
+<div class="flex items-center gap-space-sm relative z-10">
+<div class="w-9 h-9 rounded-lg bg-tertiary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-tertiary text-[22px]">timer</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-tertiary-fixed leading-tight">Slot reservado temporalmente</p>
+<p class="font-body-md text-body-md text-on-tertiary-fixed-variant">Bloque protegido para evitar colisiones de agenda con otros alumnos.</p>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-on-tertiary-fixed/10 px-3 py-1.5 rounded-lg shrink-0 relative z-10">
+<span class="material-symbols-outlined text-tertiary text-[18px]">lock_clock</span>
+<span class="font-headline-sm text-headline-sm text-tertiary font-bold tracking-tight" id="countdown-timer">14:59</span>
+</div>
+</div>
+<!-- Main Two-Column Content -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- LEFT COLUMN: Booking Details & Payment Options -->
+<div class="lg:col-span-7 xl:col-span-8 space-y-space-lg">
+<!-- Card: Detalles de la Clase -->
+<section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-md border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">school</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Detalles de la Clase</h2>
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider px-2 py-0.5 rounded bg-surface-container text-secondary font-bold">Reserva Individual</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md mb-space-md">
+<!-- Materia y Enfoque -->
+<div class="bg-surface-container-low p-space-md rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary block mb-1">Materia &amp; Objetivo</span>
+<p class="font-title-md text-title-md text-on-surface mb-0.5">Cálculo Diferencial e Integral I</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                Preparación Examen Parcial / Optimización
+              </p>
+</div>
+<!-- Horario y Zona Horaria -->
+<div class="bg-surface-container-low p-space-md rounded-lg">
+<span class="font-label-sm text-label-sm text-secondary block mb-1">Fecha y Horario Exacto</span>
+<p class="font-title-md text-title-md text-on-surface mb-0.5">Miércoles, 24 de Octubre de 2024</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                02:00 PM – 03:00 PM (Hora Costa Rica, GMT-6)
+              </p>
+</div>
+</div>
+<!-- Modalidad Card -->
+<div class="bg-surface-container-low p-space-md rounded-lg mb-space-md flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[22px]">video_camera_front</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface">En línea vía Google Meet + Pizarra Miro</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Enlace privado sincronizado se genera tras confirmar el pago.</p>
+</div>
+</div>
+<span class="self-start sm:self-center font-label-md text-label-md text-primary font-bold bg-primary-fixed px-2.5 py-1 rounded">HD &amp; Grabación incluida</span>
+</div>
+<!-- Input pedagógico -->
+<div class="space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface flex items-center justify-between" for="student-notes">
+<span>¿Qué temas, derivadas o ejercicios específicos deseas resolver? <span class="text-secondary font-normal">(Opcional)</span></span>
+<span class="text-outline text-label-sm">Máx. 300 caracteres</span>
+</label>
+<textarea class="w-full bg-surface-container-low rounded-lg p-3 text-body-md font-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow" id="student-notes" placeholder="Ej: Regla de la cadena en funciones trigonométricas inversas y análisis de asíntotas del libro Stewart 8va Edición (Capítulo 3)." rows="3"></textarea>
+<p class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-primary">lightbulb</span>
+              Compartir esto ayuda al Dr. Solano a estructurar la pizarra antes de ingresar a la sala.
+            </p>
+</div>
+</section>
+<!-- Card: Selección de Método de Pago -->
+<section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+<div class="flex items-center justify-between pb-space-sm mb-space-md border-b border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[22px]">payments</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Método de Pago</h2>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">Transacciones cifradas</span>
+</div>
+<!-- Selector de Tabs -->
+<div class="grid grid-cols-3 gap-space-xs p-1 bg-surface-container-low rounded-xl mb-space-lg" role="tablist">
+<button class="py-2.5 px-3 rounded-lg font-label-md text-label-md transition-all flex items-center justify-center gap-2 bg-primary text-on-primary shadow-sm" id="tab-btn-sinpe" onclick="switchPaymentTab('sinpe')" type="button">
+<span class="material-symbols-outlined text-[18px]">phone_iphone</span>
+<span class="font-bold">SINPE Móvil</span>
+</button>
+<button class="py-2.5 px-3 rounded-lg font-label-md text-label-md transition-all flex items-center justify-center gap-2 text-on-surface-variant hover:text-on-surface" id="tab-btn-card" onclick="switchPaymentTab('card')" type="button">
+<span class="material-symbols-outlined text-[18px]">credit_card</span>
+<span>Tarjeta</span>
+</button>
+<button class="py-2.5 px-3 rounded-lg font-label-md text-label-md transition-all flex items-center justify-center gap-2 text-on-surface-variant hover:text-on-surface" id="tab-btn-iban" onclick="switchPaymentTab('iban')" type="button">
+<span class="material-symbols-outlined text-[18px]">account_balance</span>
+<span>IBAN / Banco</span>
+</button>
+</div>
+<!-- TAB 1 CONTENT: SINPE Móvil -->
+<div class="space-y-space-md block" id="tab-content-sinpe">
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">Transferencia Rápida Nacional</span>
+<p class="font-title-md text-title-md text-on-surface mt-0.5">AuraLearn Centroamérica S.A.</p>
+<div class="flex items-center gap-2 mt-1 font-numeric-table text-numeric-table text-on-surface">
+<span class="font-mono bg-surface-container-highest px-2 py-0.5 rounded text-primary font-bold tracking-wider">8888-2872</span>
+<span class="text-secondary">(8888-AURA)</span>
+<button class="text-primary hover:text-on-surface flex items-center text-[16px] ml-1" onclick="navigator.clipboard.writeText('88882872')" title="Copiar número" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<div class="text-left md:text-right bg-surface-container-lowest p-space-sm rounded-lg shadow-sm">
+<span class="font-label-sm text-label-sm text-secondary block">Monto exacto a transferir:</span>
+<span class="font-headline-md text-headline-md text-primary font-extrabold tracking-tight">₡14,500</span>
+<span class="block font-label-sm text-label-sm text-on-surface-variant">Detalle / Motivo: "CALCULO-CARLOS-VALERIA"</span>
+</div>
+</div>
+<!-- Form SINPE -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md pt-2">
+<div class="space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface" for="sinpe-phone">Número de Teléfono Emisor</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 font-numeric-table text-numeric-table text-outline">+506</span>
+<input class="w-full bg-surface-container-low rounded-lg py-2.5 pl-14 pr-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" id="sinpe-phone" maxlength="9" placeholder="8765-4321" type="tel"/>
+</div>
+<span class="font-label-sm text-label-sm text-outline">El número desde el que ejecutó el pase SINPE.</span>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface" for="sinpe-ref">Número de Comprobante / Referencia</label>
+<input class="w-full bg-surface-container-low rounded-lg py-2.5 px-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" id="sinpe-ref" placeholder="Ej: 20241024098234" type="text"/>
+<span class="font-label-sm text-label-sm text-outline">Código de 6 a 16 dígitos proporcionado por su banco.</span>
+</div>
+</div>
+<!-- Drag and drop comprobante -->
+<div class="space-y-1.5 pt-1">
+<label class="font-label-md text-label-md text-on-surface">Subir captura o comprobante bancario (JPG, PNG o PDF)</label>
+<div class="p-space-lg rounded-xl bg-surface-container-low text-center hover:bg-surface-container transition-colors cursor-pointer flex flex-col items-center justify-center">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined text-[26px]">upload_file</span>
+</div>
+<p class="font-title-md text-title-md text-on-surface mb-0.5">Arrastra el comprobante aquí o <span class="text-primary underline">haz clic para examinar</span></p>
+<p class="font-label-sm text-label-sm text-outline">Formatos admitidos: PNG, JPG, PDF hasta 10MB</p>
+</div>
+</div>
+</div>
+<!-- TAB 2 CONTENT: Tarjeta de Crédito / Débito -->
+<div class="space-y-space-md hidden" id="tab-content-card">
+<div class="p-space-md rounded-xl bg-surface-container-low">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider">Tarjetas Aceptadas</span>
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm bg-surface-container-lowest px-2 py-0.5 rounded text-on-surface font-bold">VISA</span>
+<span class="font-label-sm text-label-sm bg-surface-container-lowest px-2 py-0.5 rounded text-on-surface font-bold">Mastercard</span>
+<span class="font-label-sm text-label-sm bg-surface-container-lowest px-2 py-0.5 rounded text-on-surface font-bold">AMEX</span>
+</div>
+</div>
+<div class="space-y-space-sm">
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Número de Tarjeta</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest rounded-lg py-2.5 pl-10 pr-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="4000 1234 5678 9010" type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">credit_card</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Vencimiento</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-2.5 px-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="MM / AA" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">CVV / CVC</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest rounded-lg py-2.5 px-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" maxlength="4" placeholder="123" type="password"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">help</span>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Nombre impreso en la tarjeta</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-2.5 px-3 text-body-md font-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="VALERIA MORA CHACON" type="text"/>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+<span>Procesado mediante Stripe con autenticación 3D Secure 2.0 obligatoria.</span>
+</div>
+</div>
+<!-- TAB 3 CONTENT: IBAN Bancario -->
+<div class="space-y-space-md hidden" id="tab-content-iban">
+<div class="p-space-md rounded-xl bg-surface-container-low space-y-space-sm">
+<div>
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider">Cuenta IBAN Banco Nacional (Colones)</span>
+<div class="flex items-center justify-between mt-1 bg-surface-container-lowest p-2 rounded-lg">
+<span class="font-mono text-numeric-table font-numeric-table text-on-surface select-all">CR05015100010026849321</span>
+<button class="text-primary hover:text-on-surface text-label-sm font-label-sm font-bold flex items-center gap-1" onclick="navigator.clipboard.writeText('CR05015100010026849321')" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span> Copiar
+                  </button>
+</div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider">Cuenta IBAN BAC Credomatic (Colones)</span>
+<div class="flex items-center justify-between mt-1 bg-surface-container-lowest p-2 rounded-lg">
+<span class="font-mono text-numeric-table font-numeric-table text-on-surface select-all">CR73010200009382710492</span>
+<button class="text-primary hover:text-on-surface text-label-sm font-label-sm font-bold flex items-center gap-1" onclick="navigator.clipboard.writeText('CR73010200009382710492')" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span> Copiar
+                  </button>
+</div>
+</div>
+<div class="text-on-surface-variant font-body-md text-body-md pt-1">
+<p><strong>Cédula Jurídica:</strong> 3-101-892304 (AuraLearn Centroamérica S.A.)</p>
+<p class="font-label-sm text-label-sm text-outline mt-1">El comprobante debe enviarse antes de los 15 minutos de reserva para garantizar la confirmación inmediata.</p>
+</div>
+</div>
+</div>
+<!-- Toggle Factura Electrónica -->
+<div class="mt-space-lg pt-space-md border-t border-surface-container">
+<div class="flex items-center justify-between cursor-pointer" onclick="toggleInvoiceSection()">
+<div class="flex items-center gap-space-sm">
+<input class="w-4 h-4 rounded text-primary focus:ring-primary" id="invoice-toggle" type="checkbox"/>
+<label class="font-title-md text-title-md text-on-surface cursor-pointer" for="invoice-toggle">
+                  Deseo factura electrónica costarricense (Hacienda)
+                </label>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px] transition-transform duration-200" id="invoice-arrow">expand_more</span>
+</div>
+<!-- Campos Condicionales de Factura -->
+<div class="hidden mt-space-md p-space-md rounded-xl bg-surface-container-low space-y-space-sm" id="invoice-fields">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Tipo de Identificación</label>
+<select class="w-full bg-surface-container-lowest rounded-lg py-2 px-3 text-body-md font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+<option>Cédula Física (9 dígitos)</option>
+<option>Cédula Jurídica (10 dígitos)</option>
+<option>DIMEX (Residente Extranjero)</option>
+<option>NITE</option>
+</select>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Número de Cédula</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-2 px-3 text-numeric-table font-numeric-table text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Ej: 1-1582-0492" type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Razón Social o Nombre Completo</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-2 px-3 text-body-md font-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="Nombre registrado en Hacienda" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface">Correo para XML y PDF</label>
+<input class="w-full bg-surface-container-lowest rounded-lg py-2 px-3 text-body-md font-body-md text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40" placeholder="facturacion@ejemplo.com" type="email"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN: Order Summary & Guarantee (Sticky) -->
+<div class="lg:col-span-5 xl:col-span-4 sticky top-28 space-y-space-md">
+<!-- Tutor Profile Snapshot -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex items-center gap-space-sm">
+<div class="relative shrink-0">
+<img class="w-16 h-16 rounded-xl object-cover" data-alt="Portrait photo of Dr. Carlos Solano, a middle-aged mathematics professor with neat glasses and professional navy blue shirt, warm academic library background with soft lighting, high-resolution authentic professional photograph." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTYkHqhwtRdcmYovL-S4ryV03Z7PWO-pGIxLMZ12m5YJS1uUbSKzW__RmzAs6Gbfs2TA0vAj4YGMCe5YRJ_ukD7BJphDvOb2rp_37DZFnsMRkPaIdFVo6Gt4cAQ9oeWbQwyuCHe-U-VRTaovXXCTtyDiSimySTEvhoMv7w21GCCZzNeQJBA_Fa3Gm_2iT_NtKZP8X85xASWe50-j5ceWbi0_jQUAbVWPNSIZqMw6-NsTevXMO0fnaKdA"/>
+<span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#10b981] border-2 border-surface-container-lowest" title="Docente Verificado Activo"></span>
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-1.5">
+<h3 class="font-title-md text-title-md text-on-surface font-bold truncate">Dr. Carlos Solano</h3>
+<span class="material-symbols-outlined text-primary text-[18px]" title="Identidad y Título Verificados">verified</span>
+</div>
+<p class="font-label-sm text-label-sm text-secondary truncate">PhD en Ciencias Matemáticas • UCR / TEC</p>
+<div class="flex items-center gap-2 mt-1">
+<div class="flex items-center text-tertiary">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-numeric-table text-numeric-table font-bold ml-0.5 text-on-surface">4.98</span>
+</div>
+<span class="text-outline text-label-sm">•</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">342 clases impartidas</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Ledger & Financial Breakdown -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm space-y-space-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Resumen de Orden</h3>
+<div class="space-y-space-sm font-body-md text-body-md text-on-surface-variant">
+<div class="flex justify-between items-center">
+<span>Sesión Magistral (1 hora)</span>
+<span class="font-numeric-table text-numeric-table text-on-surface font-bold">₡14,500</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="flex items-center gap-1">
+                Tarifa de servicio y plataforma
+                <span class="material-symbols-outlined text-outline text-[16px]" title="Cero comisiones durante el ciclo de bienvenida">info</span>
+</span>
+<div class="text-right">
+<span class="line-through text-outline font-numeric-table text-numeric-table mr-1">₡1,800</span>
+<span class="font-numeric-table text-numeric-table text-primary font-bold">₡0 (Gratis)</span>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span>Grabación en la nube &amp; Pizarra</span>
+<span class="font-label-sm text-label-sm bg-surface-container px-2 py-0.5 rounded text-secondary font-bold">INCLUIDO</span>
+</div>
+<div class="flex justify-between items-center text-[#10b981]">
+<span class="flex items-center gap-1 font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[16px]">sell</span>
+                Bono Estudiante Activo
+              </span>
+<span class="font-numeric-table text-numeric-table font-bold">-₡0</span>
+</div>
+</div>
+<!-- Total Highlight Box -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex items-baseline justify-between">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold block">Total a Pagar</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tipo de cambio ref: ~$28 USD</span>
+</div>
+<div class="text-right">
+<span class="font-headline-lg text-headline-lg font-extrabold text-primary tracking-tight">₡14,500</span>
+<span class="font-numeric-table text-numeric-table text-on-surface font-semibold ml-1">CRC</span>
+</div>
+</div>
+<!-- Botón de Confirmación Principal -->
+<button class="w-full py-3.5 px-space-md rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.99] transition-all font-title-md text-title-md font-bold shadow-md hover:shadow-lg flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+<span>Confirmar y Pagar ₡14,500</span>
+</button>
+<!-- Políticas de Cancelación Clarificadas -->
+<div class="space-y-space-xs pt-space-xs">
+<div class="flex items-start gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">event_available</span>
+<p class="font-body-md text-body-md leading-tight">
+<strong>Cancelación sin costo:</strong> Hasta 6 horas antes del inicio de la sesión con reembolso del 100%.
+              </p>
+</div>
+<div class="flex items-start gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">verified</span>
+<p class="font-body-md text-body-md leading-tight">
+<strong>Garantía de Excelencia Docente:</strong> Si la tutoría no cumple con tus expectativas técnicas, te reasignamos otro tutor o reembolsamos tu dinero.
+              </p>
+</div>
+</div>
+<div class="pt-space-xs flex items-center justify-center gap-3 text-outline text-label-sm font-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">shield</span> Protección al comprador
+            </span>
+<span>•</span>
+<span>AuraLearn Costa Rica</span>
+</div>
+</div>
+<!-- Mini Visual Helper / Certificado -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[20px]">support_agent</span>
+</div>
+<div>
+<p class="font-title-md text-title-md text-on-surface leading-tight">¿Dudas con SINPE o la reserva?</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Soporte por WhatsApp de AuraLearn activo 24/7 en Costa Rica.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Countdown Timer Logic
+  let timeLeft = 14 * 60 + 59;
+  const timerElement = document.getElementById('countdown-timer');
+  if (timerElement) {
+    const interval = setInterval(() => {
+      if (timeLeft <= 0) {
+        clearInterval(interval);
+        timerElement.textContent = "00:00";
+      } else {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }, 1000);
+  }
+
+  // Payment Tabs Switcher
+  function switchPaymentTab(tabName) {
+    const tabs = ['sinpe', 'card', 'iban'];
+    tabs.forEach(tab => {
+      const btn = document.getElementById('tab-btn-' + tab);
+      const content = document.getElementById('tab-content-' + tab);
+      if (tab === tabName) {
+        btn.classList.remove('text-on-surface-variant');
+        btn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'font-bold');
+        content.classList.remove('hidden');
+        content.classList.add('block');
+      } else {
+        btn.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm', 'font-bold');
+        btn.classList.add('text-on-surface-variant');
+        content.classList.add('hidden');
+        content.classList.remove('block');
+      }
+    });
+  }
+
+  // Invoice Accordion Toggle
+  function toggleInvoiceSection() {
+    const fields = document.getElementById('invoice-fields');
+    const toggle = document.getElementById('invoice-toggle');
+    const arrow = document.getElementById('invoice-arrow');
+    const isHidden = fields.classList.contains('hidden');
+    
+    if (isHidden) {
+      fields.classList.remove('hidden');
+      toggle.checked = true;
+      arrow.classList.add('rotate-180');
+    } else {
+      fields.classList.add('hidden');
+      toggle.checked = false;
+      arrow.classList.remove('rotate-180');
+    }
+  }
+</script></main><footer class="w-full bg-surface-container-lowest py-space-xl"><div class="max-w-7xl mx-auto px-6 lg:px-12"><div class="grid grid-cols-1 md:grid-cols-4 gap-space-lg pb-space-lg"><div class="md:col-span-1"><div class="flex items-center gap-space-xs mb-space-sm"><span class="font-headline-sm text-headline-sm font-bold text-on-surface">Aura<span class="text-primary">Learn</span></span></div><p class="font-body-md text-body-md text-on-surface-variant mb-space-md">Plataforma de tutorías de alto rigor académico y coordinación horaria precisa en Costa Rica e internacionalmente.</p><div class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span>SINPE Móvil &amp; Pasarelas Verificadas</div></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Plataforma</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Buscar Tutores</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Agendar Clases</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Calculadora SINPE</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Garantía de Satisfacción</a></li></ul></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Tutores</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Postular como Docente</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Matriz de Disponibilidad</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Estándares Académicos</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Políticas de Cobro</a></li></ul></div><div><h4 class="font-title-md text-title-md text-on-surface mb-space-sm">Soporte</h4><ul class="space-y-space-xs font-body-md text-body-md text-on-surface-variant"><li><a class="hover:text-on-surface transition-colors" href="#">Centro de Ayuda</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Reportar Incidencias</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Términos del Servicio</a></li><li><a class="hover:text-on-surface transition-colors" href="#">Privacidad</a></li></ul></div></div><div class="pt-space-md flex flex-col md:flex-row items-center justify-between gap-space-sm text-on-surface-variant font-label-sm text-label-sm"><p>© 2025 AuraLearn Inc. Todos los derechos reservados. San José, Costa Rica.</p><div class="flex items-center gap-space-md"><span>Seguridad SSL 256-Bit</span><span>Protocolo Anti-Plagio Certificado</span></div></div></div></footer></body></html>

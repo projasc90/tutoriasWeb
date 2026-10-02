@@ -43,7 +43,14 @@ tutoriasWeb/  (monorepo raíz)
     │   ├── globals.css     # Tokens Material 3 light (@theme inline) + escala tipográfica MD3
     │   ├── page.tsx        # Landing: compone secciones de components/landing/
     │   ├── tutores/page.tsx# Directorio (client) — consume useTutors → GET /api/tutors (datos reales)
-    │   └── postular/page.tsx# Onboarding del profesor (server) — propuesta de valor + wizard client
+    │   ├── tutores/[id]/page.tsx  # Perfil + motor de reserva (slots reales, toggle pagar con monedero)
+    │   ├── checkout/[id]/page.tsx # Checkout SINPE (polling 3 s, formulario comprobante)
+    │   ├── mis-tutorias/page.tsx  # Panel estudiante: reservas, monedero, cancelar/reprogramar
+    │   ├── tutor/sesiones/page.tsx       # Panel tutor: completar sesiones (liquidación)
+    │   ├── tutor/disponibilidad/page.tsx # Editor de franjas semanales (PUT)
+    │   ├── admin/pagos/page.tsx   # Cola de comprobantes (aprobar/rechazar)
+    │   ├── admin/tutores/page.tsx # Cola de postulaciones (aprobar/rechazar)
+    │   ├── postular/page.tsx# Onboarding del profesor (server) — propuesta de valor + wizard client
     ├── components/
     │   ├── material-icon.tsx # MaterialIcon + MaterialSymbols (carga única de fuentes)
     │   ├── landing/        # Secciones landing: hero, trust-strip, rigor, disciplines,
@@ -82,9 +89,9 @@ tutoriasWeb/  (monorepo raíz)
 | `web/components/landing/` | Secciones de marketing y catálogo visual | Validaciones de negocio |
 | `web/components/ui/` | Primitivas de UI reutilizables | Conocimiento del dominio |
 | `web/components/material-icon.tsx` | Iconografía Material Symbols + carga de fuentes | — |
-| `api/AuraLearn.Api` | HTTP surface: TutorsController, AuthController, TutorApplicationsController (postulación), AdminTutorApplicationsController (decisión, rol Admin), JWT bearer, CORS, healthcheck | Reglas de negocio, acceso a datos |
-| `api/AuraLearn.Application` | Casos de uso (TutorService, AuthService, TutorApplicationService), DTOs, validación (FluentValidation), puertos | Detalles de persistencia |
-| `api/AuraLearn.Domain` | Entidades, enums, invariantes | Dependencias externas (EF, HTTP) |
+| `api/AuraLearn.Api` | HTTP surface: TutorsController (catálogo + GET por id), AuthController, TutorApplicationsController (postulación), AdminTutorApplicationsController (decisión, rol Admin), SlotsController (ensure-ahead), ReservationsController (crear/comprobante/cancelar/complete/tutor-sessions), AdminPaymentsController (cola, rol Admin), AvailabilityController (reglas del tutor, rol Tutor), WalletController, JWT bearer, CORS, healthcheck | Reglas de negocio, acceso a datos |
+| `api/AuraLearn.Application` | Casos de uso (TutorService, AuthService, TutorApplicationService, ReservationService, SlotAvailabilityService, AvailabilityService, SlotQueryService, SlotGenerationService, SinpeComprobanteValidator), DTOs, validación (FluentValidation), puertos | Detalles de persistencia |
+| `api/AuraLearn.Domain` | Entidades (Tutor, User, Slot, Reservation, WalletEntry, TutorAvailability), enums, ReservationStateMachine | Dependencias externas (EF, HTTP) |
 | `api/AuraLearn.Infrastructure` | EF Core (DbContext, repositorios), migraciones | Lógica de caso de uso |
 | `api/tests/AuraLearn.Tests` | Unit tests de Application/Domain | — |
 | `design/stitch/` | Referencia visual exportada | Código productivo (no copiar tal cual) |

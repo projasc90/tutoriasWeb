@@ -23,6 +23,123 @@ namespace AuraLearn.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AuraLearn.Domain.Entities.Reservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<int?>("ComprobanteAmountCrc")
+                        .HasColumnType("integer")
+                        .HasColumnName("comprobante_amount_crc");
+
+                    b.Property<string>("ComprobantePhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("comprobante_phone");
+
+                    b.Property<DateTime?>("ComprobanteSubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("comprobante_submitted_at");
+
+                    b.Property<string>("ConfirmationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("confirmation_number");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_reason");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<int>("PriceCrc")
+                        .HasColumnType("integer")
+                        .HasColumnName("price_crc");
+
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("slot_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfirmationNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reservations_confirmation_number");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reservations_idempotency_key");
+
+                    b.HasIndex("SlotId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reservations_active_slot")
+                        .HasFilter("status IN (1, 2)");
+
+                    b.HasIndex("StudentId", "CreatedAt")
+                        .HasDatabaseName("ix_reservations_student_created");
+
+                    b.ToTable("reservations", (string)null);
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.Slot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("EndAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_at");
+
+                    b.Property<DateTime>("StartAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_at");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tutor_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId", "StartAt")
+                        .IsUnique()
+                        .HasDatabaseName("ux_slots_tutor_start");
+
+                    b.ToTable("slots", (string)null);
+                });
+
             modelBuilder.Entity("AuraLearn.Domain.Entities.Tutor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -69,14 +186,14 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasColumnType("numeric(3,2)")
                         .HasColumnName("rating");
 
-                    b.Property<int>("Reviews")
-                        .HasColumnType("integer")
-                        .HasColumnName("reviews");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("rejection_reason");
+
+                    b.Property<int>("Reviews")
+                        .HasColumnType("integer")
+                        .HasColumnName("reviews");
 
                     b.PrimitiveCollection<List<string>>("Subjects")
                         .IsRequired()
@@ -306,6 +423,38 @@ namespace AuraLearn.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorAvailability", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<TimeOnly>("EndLocal")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("end_local");
+
+                    b.Property<TimeOnly>("StartLocal")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("start_local");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tutor_id");
+
+                    b.Property<int>("Weekday")
+                        .HasColumnType("integer")
+                        .HasColumnName("weekday");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId", "Weekday", "StartLocal")
+                        .IsUnique()
+                        .HasDatabaseName("ux_tutor_availability_tutor_weekday_start");
+
+                    b.ToTable("tutor_availability", (string)null);
+                });
+
             modelBuilder.Entity("AuraLearn.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -348,6 +497,76 @@ namespace AuraLearn.Infrastructure.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("AuraLearn.Domain.Entities.WalletEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AmountCrc")
+                        .HasColumnType("integer")
+                        .HasColumnName("amount_crc");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("ReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reservation_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_wallet_entries_user_created");
+
+                    b.ToTable("wallet_entries", (string)null);
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.Reservation", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Slot", "Slot")
+                        .WithMany()
+                        .HasForeignKey("SlotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_reservations_slots_slot_id");
+
+                    b.HasOne("AuraLearn.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_reservations_users_student_id");
+
+                    b.Navigation("Slot");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.Slot", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Tutor", "Tutor")
+                        .WithMany()
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_slots_tutors_tutor_id");
+
+                    b.Navigation("Tutor");
+                });
+
             modelBuilder.Entity("AuraLearn.Domain.Entities.Tutor", b =>
                 {
                     b.HasOne("AuraLearn.Domain.Entities.User", null)
@@ -355,6 +574,36 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_tutors_users_user_id");
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorAvailability", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Tutor", "Tutor")
+                        .WithMany()
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tutor_availability_tutors_tutor_id");
+
+                    b.Navigation("Tutor");
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.WalletEntry", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_wallet_entries_reservations_reservation_id");
+
+                    b.HasOne("AuraLearn.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_entries_users_user_id");
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

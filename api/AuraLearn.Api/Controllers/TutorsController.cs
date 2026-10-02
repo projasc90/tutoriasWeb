@@ -31,4 +31,14 @@ public class TutorsController(TutorService tutorService) : ControllerBase
         var result = await tutorService.SearchAsync(criteria, ct);
         return Ok(result);
     }
+
+    /// <summary>Detalle público de un tutor verificado (perfil /tutores/[id]).</summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TutorDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var tutor = await tutorService.GetByIdAsync(id, ct);
+        return tutor is null ? NotFound() : Ok(tutor);
+    }
 }

@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+using System.Text.Json.Serialization;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Persistence (EF Core + PostgreSQL) ─────────────────────────────
@@ -18,8 +20,24 @@ builder.Services.AddDbContext<AuraLearnDbContext>(options =>
 
 // ── Application (servicios + validadores) ──────────────────────────
 builder.Services.AddScoped<ITutorRepository, TutorRepository>();
+builder.Services.AddScoped<ISlotRepository, SlotRepository>();
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<ITutorAvailabilityRepository, TutorAvailabilityRepository>();
+
+// SlotGenerationService es estático; el resto de servicios van scoped
+builder.Services.AddScoped<SinpeComprobanteValidator>();
+builder.Services.AddScoped<ReservationService>();
+builder.Services.AddScoped<SlotAvailabilityService>();
+builder.Services.AddScoped<AvailabilityService>();
+
 builder.Services.AddScoped<TutorService>();
+
 builder.Services.AddValidatorsFromAssemblyContaining<TutorSearchCriteriaValidator>();
+
+// ── Configuración SINPE (número receptor, sin secretos en prod) ──
+builder.Services.AddSingleton(new SinpeConfig(
+    ReceptorPhone: builder.Configuration["Sinpe:ReceptorPhone"] ?? "88888888"));
 
 // ── Auth (JWT bearer; endpoints en AuthController) ──
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -57,7 +75,9 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
 
 // ── API surface ────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MaterialIcon } from "@/components/material-icon";
 import { SiteHeader } from "@/components/landing/currency-toggle";
 import { useTutors } from "@/hooks/use-tutors";
 import { AVAILABILITIES, DEFAULT_FILTERS, LEVELS, RATINGS, UNIVERSITIES } from "@/lib/data/tutors";
 import { applySort } from "@/lib/filters";
+import { formatSlotEsCr } from "@/lib/time";
 import type { FilterState, SortOption, Tutor } from "@/lib/types/tutor";
 
 export default function TutoresPage() {
@@ -320,7 +322,9 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
         {/* Next Slot */}
         <div className="flex items-center justify-between rounded-lg bg-surface-container-low p-2.5">
           <span className="text-label-sm text-on-surface-variant">Próximo cupo:</span>
-          <span className="text-label-sm font-bold text-primary">{tutor.nextSlot}</span>
+          <span className="text-label-sm font-bold text-primary">
+            {tutor.nextSlotAt ? formatSlotEsCr(tutor.nextSlotAt) : "Sin cupos"}
+          </span>
         </div>
       </div>
 
@@ -330,12 +334,12 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
           <span className="text-headline-sm font-extrabold text-on-surface">₡{tutor.priceCrc.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</span>
           <span className="block text-label-sm text-on-surface-variant">/ hora (~${tutor.priceUsd})</span>
         </div>
-        <button
-          type="button"
+        <Link
+          href={`/tutores/${tutor.id}`}
           className="rounded-lg bg-primary px-4 py-2 text-on-primary text-label-md font-semibold shadow-sm transition-colors hover:bg-on-primary-fixed-variant"
         >
           Ver Perfil
-        </button>
+        </Link>
       </div>
     </article>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { MaterialIcon } from "@/components/material-icon";
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 
 export function SiteHeader() {
   const { state, logout } = useAuth();
+  const [panelOpen, setPanelOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant/60 bg-background/80 backdrop-blur-md">
@@ -38,10 +40,7 @@ export function SiteHeader() {
           <CurrencyToggle />
           {state.status === "authenticated" ? (
             <>
-              <span className="hidden items-center gap-1.5 whitespace-nowrap sm:inline-flex items-center px-3 py-2 text-on-surface-variant text-sm font-semibold">
-                <MaterialIcon name="account_circle" className="text-[20px] text-primary" />
-                Hola, {state.session.fullName.split(" ")[0]}
-              </span>
+              <PanelMenu open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} />
               <button
                 type="button"
                 onClick={logout}
@@ -107,6 +106,62 @@ function CurrencyToggle() {
       >
         USD $
       </button>
+    </div>
+  );
+}
+
+/** Rutas del panel según el rol del JWT (Estudiante | Tutor | Admin). */
+function PanelMenu({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const { state } = useAuth();
+  const role = state.status === "authenticated" ? state.session.role : "Estudiante";
+
+  const items =
+    role === "Admin"
+      ? [
+          { label: "Cola de pagos", href: "/admin/pagos", icon: "payments" },
+          { label: "Aprobación de tutores", href: "/admin/tutores", icon: "verified" },
+        ]
+      : role === "Tutor"
+        ? [
+            { label: "Mis sesiones", href: "/tutor/sesiones", icon: "school" },
+            { label: "Gestor de disponibilidad", href: "/tutor/disponibilidad", icon: "edit_calendar" },
+          ]
+        : [
+            { label: "Mis tutorías y monedero", href: "/mis-tutorias", icon: "event_available" },
+          ];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-surface-container-low px-3 py-2 text-on-surface text-sm font-semibold hover:bg-surface-container-high transition-colors"
+      >
+        <MaterialIcon name="dashboard" className="text-[20px] text-primary" />
+        Mi Panel
+        <MaterialIcon name={open ? "arrow_drop_up" : "arrow_drop_down"} className="text-[18px]" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl bg-surface-container-lowest p-1.5 shadow-xl ring-1 ring-outline-variant"
+        >
+          {items.map((item) => (
+            <a
+              key={item.href}
+              role="menuitem"
+              href={item.href}
+              onClick={onToggle}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
+            >
+              <MaterialIcon name={item.icon} className="text-[20px] text-primary" />
+              {item.label}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

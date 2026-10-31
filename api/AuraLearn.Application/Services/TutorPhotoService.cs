@@ -31,13 +31,67 @@ public class TutorPhotoService(ITutorRepository tutors, IFileStorage storage)
         if (!IsValid(fileName, contentType, sizeBytes))
             return TutorPhotoResult<TutorPhotoResponse>.Invalid();
 
+        return await ApplyAsync(
+            userId, fileName, sizeBytes,
+            (tutor, token) => SavePhotoAsync(tutor, fileName, content, token),
+            ct);
+    }
+
+    /// <summary>Escribe el stream recibido en el storage (camino multipart).</summary>
+    private async Task<string?> SavePhotoAsync(
+        Tutor tutor, string fileName, Stream content, CancellationToken ct) =>
+        await storage.SavePhotoAsync(tutor.Id, fileName, content, ct);
+
+    /// <summary>
+    /// Confirma una subida directa desde el navegador (ADR-009). Igual que en
+    /// los documentos, se validan los metadatos reales del storage y que el
+    /// pathname pertenezca al usuario autenticado.
+    /// </summary>
+    public async Task<TutorPhotoResult<TutorPhotoResponse>> AttachAsync(
+        Guid userId, AttachPhotoCommand command, CancellationToken ct)
+    {
+        if (!IsValid(command.FileName, command.ContentType, command.SizeBytes))
+            return TutorPhotoResult<TutorPhotoResponse>.Invalid();
+
+        return await ApplyAsync(
+            userId, command.FileName, command.SizeBytes,
+            async (_, token) =>
+            {
+                if (string.IsNullOrWhiteSpace(command.StoragePath)
+                    || !command.StoragePath.StartsWith($"{userId:N}/", StringComparison.Ordinal))
+                    return null;
+
+                var info = await storage.GetInfoAsync(command.StoragePath, token);
+                if (info is null
+                    || info.SizeBytes != command.SizeBytes
+                    || !IsValid(command.FileName, info.ContentType, info.SizeBytes))
+                    return null;
+
+                return command.StoragePath;
+            },
+            ct);
+    }
+
+    /// <summary>
+    /// Upsert común a ambos caminos de subida. <paramref name="resolveStoragePath"/>
+    /// devuelve null si el archivo no es válido o no pertenece al tutor.
+    /// </summary>
+    private async Task<TutorPhotoResult<TutorPhotoResponse>> ApplyAsync(
+        Guid userId,
+        string fileName,
+        long sizeBytes,
+        Func<Tutor, CancellationToken, Task<string?>> resolveStoragePath,
+        CancellationToken ct)
+    {
         var tutor = await tutors.GetByUserIdAsync(userId, ct);
         if (tutor is null)
             return TutorPhotoResult<TutorPhotoResponse>.NotFound();
 
-        var oldPath = tutor.PhotoPath;
-        var storagePath = await storage.SavePhotoAsync(tutor.Id, fileName, content, ct);
+        var storagePath = await resolveStoragePath(tutor, ct);
+        if (string.IsNullOrWhiteSpace(storagePath))
+            return TutorPhotoResult<TutorPhotoResponse>.Invalid();
 
+        var oldPath = tutor.PhotoPath;
         tutor.PhotoPath = storagePath;
         await tutors.UpdateAsync(tutor, ct);
 

@@ -481,13 +481,150 @@ export async function verifyApplication(
   }
 }
 
+// ── Subida directa a Vercel Blob (ADR-009) ──────────────────────
+//
+// Vercel Functions rechaza cuerpos > 4.5 MB y los documentos admiten 5 MB, así
+// que el navegador sube el archivo directo al store y el API .NET solo recibe
+// la referencia (POST .../attach), validando los metadatos reales del blob.
+// Si el store no está conectado (dev local sin BLOB_READ_WRITE_TOKEN) se cae
+// al multipart clásico, que sigue funcionando contra LocalFileStorage.
+
+const BLOB_ROUTE = "/api/blob/upload";
+
+/** Caché de capacidad por carga de página: una sola sonda. */
+let blobEnabled: boolean | null = null;
+
+async function isBlobEnabled(): Promise<boolean> {
+  if (blobEnabled !== null) return blobEnabled;
+  try {
+    const res = await fetch(BLOB_ROUTE);
+    blobEnabled = res.ok ? Boolean(((await res.json()) as { enabled?: boolean }).enabled) : false;
+  } catch {
+    blobEnabled = false;
+  }
+  return blobEnabled;
+}
+
+/** `sub` del JWT (id del usuario). La firma la valida el API, no el cliente. */
+function jwtSubject(token: string): string | null {
+  try {
+    const payload = token.split(".")[1];
+    const claims = JSON.parse(atob(payload + "=".repeat(-payload.length % 4))) as { sub?: string };
+    return claims.sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pathname del blob: `{userId}/<categoria>/<uuid><ext>`. El prefijo con el id
+ * del usuario es lo que el API usa para rechazar blobs ajenos, y el UUID
+ * evita colisiones sin depender de `addRandomSuffix`.
+ */
+function buildBlobPathname(token: string, segments: string[], file: File): string | null {
+  const subject = jwtSubject(token);
+  if (!subject) return null;
+
+  const dot = file.name.lastIndexOf(".");
+  const extension = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
+  return `${subject.replace(/-/g, "").toLowerCase()}/${segments.join("/")}/${crypto.randomUUID()}${extension}`;
+}
+
+type DirectUploadOutcome =
+  | { ok: true; pathname: string }
+  | { ok: false; disabled: true }
+  | { ok: false; disabled: false; error: string };
+
+/** Sube el archivo directo al store usando el endpoint de tokens de Next. */
+async function uploadDirect(
+  token: string,
+  pathname: string,
+  file: File,
+): Promise<DirectUploadOutcome> {
+  try {
+    const { upload } = await import("@vercel/blob/client");
+    const blob = await upload(pathname, file, {
+      access: "private",
+      handleUploadUrl: BLOB_ROUTE,
+      // El route verifica este JWT contra el API antes de firmar el token.
+      clientPayload: token,
+    });
+    return { ok: true, pathname: blob.pathname };
+  } catch {
+    return {
+      ok: false,
+      disabled: false,
+      error: "No se pudo subir el archivo al almacenamiento. Inténtalo de nuevo.",
+    };
+  }
+}
+
 // ── Documentos de verificación (espejo de TutorDocumentsController) ──
 
 /**
- * POST /api/tutors/me/documents — sube un documento (multipart: kind + file).
+ * POST /api/tutors/me/documents — sube un documento.
+ * Preferente: subida directa al store + confirmación (`.../attach`).
+ * Fallback: multipart clásico (dev local sin Blob).
  * Titulo/Identificacion reemplazan el archivo previo; Certificacion acumula (máx 5).
  */
 export async function uploadTutorDocument(
+  token: string,
+  kind: TutorDocumentKindName,
+  file: File,
+): Promise<ApiResult<TutorDocumentItem>> {
+  if (await isBlobEnabled()) {
+    // {userId}/{kind}/{uuid}.{ext} — mismo esquema que genera el API .NET.
+    const pathname = buildBlobPathname(token, [kind.toLowerCase()], file);
+    if (pathname) {
+      const direct = await uploadDirect(token, pathname, file);
+      if (direct.ok) {
+        const attached = await attachTutorDocument(token, kind, direct.pathname, file);
+        if (attached) return attached;
+      } else if (!direct.disabled) {
+        return { ok: false, error: direct.error };
+      }
+    }
+  }
+
+  return uploadTutorDocumentMultipart(token, kind, file);
+}
+
+/** POST /api/tutors/me/documents/attach — confirma una subida directa. */
+async function attachTutorDocument(
+  token: string,
+  kind: TutorDocumentKindName,
+  pathname: string,
+  file: File,
+): Promise<ApiResult<TutorDocumentItem> | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/tutors/me/documents/attach`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        kind,
+        storagePath: pathname,
+        fileName: file.name,
+        contentType: file.type,
+        sizeBytes: file.size,
+      }),
+    });
+
+    // 404/400/409 son señales de negocio: se devuelve null para que el caller
+    // caiga al multipart y dé el mensaje específico de esa ruta.
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as TutorDocumentItem;
+    return { ok: true, data };
+  } catch {
+    return null;
+  }
+}
+
+/** Camino multipart histórico (sigue vigente en local y como fallback). */
+async function uploadTutorDocumentMultipart(
   token: string,
   kind: TutorDocumentKindName,
   file: File,
@@ -599,10 +736,62 @@ export function tutorPhotoUrl(tutorId: string): string {
 }
 
 /**
- * POST /api/tutors/me/photo — sube o reemplaza la foto de perfil del tutor
- * autenticado (multipart: file). Devuelve la URL pública relativa.
+ * POST /api/tutors/me/photo — sube o reemplaza la foto de perfil del tutor.
+ * Preferente: subida directa al store + confirmación (`.../attach`);
+ * fallback: multipart clásico. Devuelve la URL pública relativa.
  */
 export async function uploadTutorPhoto(
+  token: string,
+  file: File,
+): Promise<ApiResult<{ photoUrl: string }>> {
+  if (await isBlobEnabled()) {
+    const pathname = buildBlobPathname(token, ["photo"], file);
+    if (pathname) {
+      const direct = await uploadDirect(token, pathname, file);
+      if (direct.ok) {
+        const attached = await attachTutorPhoto(token, direct.pathname, file);
+        if (attached) return attached;
+      } else if (!direct.disabled) {
+        return { ok: false, error: direct.error };
+      }
+    }
+  }
+
+  return uploadTutorPhotoMultipart(token, file);
+}
+
+/** POST /api/tutors/me/photo/attach — confirma una subida directa de la foto. */
+async function attachTutorPhoto(
+  token: string,
+  pathname: string,
+  file: File,
+): Promise<ApiResult<{ photoUrl: string }> | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/tutors/me/photo/attach`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        storagePath: pathname,
+        fileName: file.name,
+        contentType: file.type,
+        sizeBytes: file.size,
+      }),
+    });
+
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as { photoUrl: string };
+    return { ok: true, data };
+  } catch {
+    return null;
+  }
+}
+
+/** Camino multipart histórico (sigue vigente en local y como fallback). */
+async function uploadTutorPhotoMultipart(
   token: string,
   file: File,
 ): Promise<ApiResult<{ photoUrl: string }>> {

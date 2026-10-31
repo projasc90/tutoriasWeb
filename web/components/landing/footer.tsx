@@ -1,25 +1,33 @@
+import Link from "next/link";
+
 import { MaterialIcon } from "@/components/material-icon";
 
-const PLATFORM = [
-  "Buscar Tutores",
-  "Materias Populares",
-  "Calendarios en Vivo",
-  "Centro de Ayuda",
-  "Estado del Sistema",
+/**
+ * Sin `href` = sección aún sin página pública: se renderiza como texto para no
+ * ofrecer enlaces muertos (antes eran `href="#"` y saltaban al inicio).
+ */
+type FooterLink = { label: string; href?: string };
+
+const PLATFORM: FooterLink[] = [
+  { label: "Buscar Tutores", href: "/tutores" },
+  { label: "Materias Populares", href: "/#disciplinas" },
+  { label: "Calendarios en Vivo" },
+  { label: "Centro de Ayuda" },
+  { label: "Estado del Sistema" },
 ];
 
-const EDUCATORS = [
-  "Publicar tu Perfil",
-  "Política de Precios",
-  "Comisiones y Pagos",
-  "Foro de Mentores",
+const EDUCATORS: FooterLink[] = [
+  { label: "Publicar tu Perfil", href: "/postular" },
+  { label: "Política de Precios" },
+  { label: "Comisiones y Pagos" },
+  { label: "Foro de Mentores" },
 ];
 
-const LEGAL = [
-  "Términos y Condiciones",
-  "Política de Privacidad",
-  "Política de Cookies",
-  "Tratamiento de Datos",
+const LEGAL: FooterLink[] = [
+  { label: "Términos y Condiciones" },
+  { label: "Política de Privacidad" },
+  { label: "Política de Cookies" },
+  { label: "Tratamiento de Datos" },
 ];
 
 export function SiteFooter() {
@@ -80,20 +88,26 @@ function FooterColumn({
   items,
 }: {
   title: string;
-  items: string[];
+  items: FooterLink[];
 }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-on-surface text-title-md font-bold">{title}</h3>
       <ul className="flex flex-col gap-2">
         {items.map((item) => (
-          <li key={item}>
-            <a
-              href="#"
-              className="text-on-surface-variant hover:text-on-surface text-body-md transition-colors"
-            >
-              {item}
-            </a>
+          <li key={item.label}>
+            {item.href ? (
+              <Link
+                href={item.href}
+                className="text-on-surface-variant hover:text-on-surface text-body-md transition-colors"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <span className="text-on-surface-variant/70 text-body-md">
+                {item.label}
+              </span>
+            )}
           </li>
         ))}
       </ul>

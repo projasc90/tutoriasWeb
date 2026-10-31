@@ -1,0 +1,9 @@
+# Artefactos de build y tests no forman parte del contexto de la imagen.
+# El Dockerfile publica desde AuraLearn.Api y solo copia los 4 proyectos.
+bin/
+**/bin/
+obj/
+**/obj/
+tests/
+*.user
+.vs/

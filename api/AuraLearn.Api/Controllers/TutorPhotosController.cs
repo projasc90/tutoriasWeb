@@ -73,4 +73,37 @@ public class TutorPhotosController(TutorPhotoService service) : ControllerBase
         var photo = result.Value!;
         return File(photo.Content, photo.ContentType);
     }
+
+    /// <summary>
+    /// Confirma una subida directa de la foto (ADR-009): el navegador subió el
+    /// archivo al store y aquí solo se envía la referencia. Evita el límite de
+    /// 4.5 MB por request de Vercel Functions.
+    /// </summary>
+    [HttpPost("me/photo/attach")]
+    [Authorize]
+    [ProducesResponseType(typeof(TutorPhotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TutorPhotoResponse>> Attach(
+        [FromBody] AttachPhotoCommand command, CancellationToken ct)
+    {
+        var result = await service.AttachAsync(GetUserId(), command, ct);
+
+        if (result.IsNotFound)
+            return NotFound(new ProblemDetails
+            {
+                Title = "No tienes un perfil de tutor",
+                Status = StatusCodes.Status404NotFound,
+            });
+
+        if (result.IsInvalid)
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Adjunto inválido: JPEG/PNG/WebP, ≤ 5 MB, o el archivo no pertenece a tu cuenta",
+                Status = StatusCodes.Status400BadRequest,
+            });
+
+        return Ok(result.Value);
+    }
 }

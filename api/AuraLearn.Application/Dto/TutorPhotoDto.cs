@@ -3,6 +3,16 @@ namespace AuraLearn.Application.Dto;
 /// <summary>Estado de la foto de perfil tras subir/reemplazar (URL pública relativa).</summary>
 public record TutorPhotoResponse(string PhotoUrl);
 
+/// <summary>
+/// Confirmación de una subida directa de la foto desde el navegador (ADR-009).
+/// El servicio contrasta tamaño y tipo con los metadatos reales del storage.
+/// </summary>
+public record AttachPhotoCommand(
+    string StoragePath,
+    string FileName,
+    string ContentType,
+    long SizeBytes);
+
 /// <summary>Contenido de la foto para descarga (el stream lo cierra el FileResult).</summary>
 public record TutorPhotoFile(string ContentType, Stream Content);
 

@@ -379,4 +379,140 @@ public class TutorDocumentServiceTests
 
         Assert.True(result.IsNotFound);
     }
+
+    // ── AttachAsync: subida directa confirmada (ADR-009) ──────────
+
+    /// <summary>Pathname válido: cuelga del prefijo del usuario autenticado.</summary>
+    private static string ValidPathname(Guid userId) =>
+        $"{userId:N}/titulo/{Guid.NewGuid():N}.pdf";
+
+    [Fact]
+    public async Task Attach_WithOwnedPathAndMatchingMetadata_CreatesDocument()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = ValidPathname(userId);
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        _documents.ListByTutorAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns([]);
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>())
+            .Returns(new StoredFileInfo(1024, "application/pdf"));
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachDocumentCommand(TutorDocumentKind.Titulo, pathname, "titulo.pdf", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsCreated);
+        Assert.Equal("titulo.pdf", result.Value!.FileName);
+        Assert.Equal(1024, result.Value.SizeBytes);
+        await _documents.Received(1).AddAsync(
+            Arg.Is<TutorDocument>(d => d.TutorId == tutor.Id && d.StoragePath == pathname),
+            Arg.Any<CancellationToken>());
+        // La subida directa nunca escribe bytes desde el API.
+        await _storage.DidNotReceive().SaveAsync(
+            Arg.Any<Guid>(), Arg.Any<TutorDocumentKind>(), Arg.Any<string>(),
+            Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Attach_WithPathFromAnotherUser_IsInvalidAndDoesNotPersist()
+    {
+        var tutor = CreateTutor();
+        // El pathname lo construyó otro usuario: adoptar ese blob sería un bypass de autorización.
+        var foreignPathname = ValidPathname(Guid.NewGuid());
+
+        _tutors.GetByUserIdAsync(tutor.UserId!.Value, Arg.Any<CancellationToken>()).Returns(tutor);
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            tutor.UserId!.Value,
+            new AttachDocumentCommand(TutorDocumentKind.Titulo, foreignPathname, "titulo.pdf", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+        await _storage.DidNotReceive().GetInfoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _documents.DidNotReceive().AddAsync(Arg.Any<TutorDocument>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Attach_WhenStoredSizeDiffersFromDeclared_IsInvalid()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = ValidPathname(userId);
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        // El cliente declara 1 KB pero el store dice 9 MB: se descarta.
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>())
+            .Returns(new StoredFileInfo(9 * 1024 * 1024, "application/pdf"));
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachDocumentCommand(TutorDocumentKind.Titulo, pathname, "titulo.pdf", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+        await _documents.DidNotReceive().AddAsync(Arg.Any<TutorDocument>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Attach_WhenStorageContentTypeIsNotAllowed_IsInvalid()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = $"{userId:N}/titulo/{Guid.NewGuid():N}.exe";
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>())
+            .Returns(new StoredFileInfo(1024, "application/x-msdownload"));
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachDocumentCommand(TutorDocumentKind.Titulo, pathname, "titulo.exe", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+    }
+
+    [Fact]
+    public async Task Attach_WhenBlobMissingInStore_IsInvalid()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = ValidPathname(userId);
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>()).Returns((StoredFileInfo?)null);
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachDocumentCommand(TutorDocumentKind.Titulo, pathname, "titulo.pdf", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+    }
+
+    [Fact]
+    public async Task Attach_WhenIdentificationIsLockedInVerified_ReturnsConflict()
+    {
+        var tutor = CreateTutor(VerificationStatus.Verified);
+        var userId = tutor.UserId!.Value;
+        var pathname = $"{userId:N}/identificacion/{Guid.NewGuid():N}.pdf";
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachDocumentCommand(TutorDocumentKind.Identificacion, pathname, "id.pdf", "application/pdf", 1024),
+            CancellationToken.None);
+
+        Assert.True(result.IsConflict);
+        Assert.Equal(TutorDocumentErrors.IdentificationLocked, result.ErrorCode);
+    }
 }

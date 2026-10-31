@@ -1,0 +1,80 @@
+# CI — API AuraLearn (.NET 10) para despliegue en Vercel Container Runtime.
+#
+# El contenedor lo construye y despliega Vercel desde su integración Git
+# (proyecto con Root Directory = api y Framework Preset = Container — ADR-009).
+# Este workflow NO publica imágenes: solo valida el código y aplica migraciones.
+#
+# Disparadores:
+#  - pull_request: build + tests (gate de calidad).
+#  - push a main: build + tests + migraciones contra Neon.
+#
+# Secretos requeridos (GitHub → Settings → Secrets and variables → Actions):
+#  - NEON_CONNECTION_STRING: connection string pooled de Neon (sslmode=require).
+#
+# Migraciones: Vercel no permite sobreescribir el comando de arranque, así que
+# el modo one-shot de Program.cs (ApplyMigrations=true) se ejecuta aquí y no
+# dentro del servicio desplegado. Nunca son automáticas en cada arranque.
+
+name: api-ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build
+        working-directory: api
+        run: dotnet build
+
+      - name: Test
+        working-directory: api
+        run: dotnet test --no-build --verbosity normal
+
+  migrate:
+    # Solo en push a main: aplica migraciones EF pendientes contra Neon.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build (Release)
+        working-directory: api
+        run: dotnet build -c Release
+
+      - name: Apply EF migrations (one-shot)
+        working-directory: api
+        env:
+          ConnectionStrings__Default: ${{ secrets.NEON_CONNECTION_STRING }}
+          ASPNETCORE_ENVIRONMENT: Production
+          # El arranque exige Jwt:Key (falla rápido si falta). El proceso de
+          # migración termina antes de servir tráfico, así que el valor es
+          # descartable: no se usa para firmar ni validar tokens.
+          Jwt__Key: "migration-only-placeholder-not-used-for-auth"
+          Jwt__Issuer: "AuraLearn.Api"
+          # Activa el modo one-shot de Program.cs: aplica migraciones y termina.
+          ApplyMigrations: "true"
+        run: dotnet run --project AuraLearn.Api -c Release --no-build

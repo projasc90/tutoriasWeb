@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { MaterialIcon } from "@/components/material-icon";
 import { useAuth } from "@/hooks/use-auth";
 
-const NAV_ITEMS = [
-  { label: "Buscar Tutores", href: "#catalogo" },
-  { label: "Cómo Funciona", href: "#como-funciona" },
-  { label: "Materias Populares", href: "#disciplinas" },
+/**
+ * Ítems del header. `hash` apunta a secciones de la landing; `href` a rutas
+ * reales. Separarlos evita anchors muertos cuando el header se reutiliza fuera
+ * de la portada (paneles, /tutores, checkout) y enlaza "Buscar Tutores" al
+ * directorio real en lugar del grid de destacados (que no siempre se renderiza).
+ */
+const NAV_ITEMS: { label: string; href?: string; hash?: string }[] = [
+  { label: "Buscar Tutores", href: "/tutores" },
+  { label: "Cómo Funciona", hash: "como-funciona" },
+  { label: "Materias Populares", hash: "disciplinas" },
   { label: "Conviértete en Tutor", href: "/postular" },
 ];
 
@@ -28,8 +35,13 @@ function visibleNavItems(role: string | null) {
 export function SiteHeader() {
   const { state, logout } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
+  const pathname = usePathname();
   const role = state.status === "authenticated" ? state.session.role : null;
   const navItems = visibleNavItems(role);
+  const onHome = pathname === "/";
+
+  /** Ancla en la portada; desde otra ruta vuelve a la landing con el hash. */
+  const hashHref = (hash: string) => (onHome ? `#${hash}` : `/#${hash}`);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant/60 bg-background/80 backdrop-blur-md">
@@ -40,13 +52,13 @@ export function SiteHeader() {
           className="hidden items-center gap-6 xl:flex"
         >
           {navItems.map((item) => (
-            <a
+            <Link
               key={item.label}
-              href={item.href}
+              href={item.href ?? hashHref(item.hash!)}
               className="whitespace-nowrap text-on-surface-variant hover:text-on-surface transition-colors text-sm font-semibold tracking-tight"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="flex items-center gap-3">
@@ -63,19 +75,19 @@ export function SiteHeader() {
               </button>
             </>
           ) : state.status === "anonymous" ? (
-            <a
+            <Link
               href="/login"
               className="hidden whitespace-nowrap sm:inline-flex items-center px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors text-sm font-semibold"
             >
               Iniciar Sesión
-            </a>
+            </Link>
           ) : null}
-          <a
-            href="#catalogo"
+          <Link
+            href="/tutores"
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-4 py-2 text-on-primary text-sm font-semibold hover:bg-on-primary-fixed-variant transition-colors shadow-sm"
           >
             Reservar un Tutor
-          </a>
+          </Link>
         </div>
       </div>
     </header>
@@ -167,7 +179,7 @@ function PanelMenu({ open, onToggle }: { open: boolean; onToggle: () => void }) 
           className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl bg-surface-container-lowest p-1.5 shadow-xl ring-1 ring-outline-variant"
         >
           {items.map((item) => (
-            <a
+            <Link
               key={item.href}
               role="menuitem"
               href={item.href}
@@ -176,7 +188,7 @@ function PanelMenu({ open, onToggle }: { open: boolean; onToggle: () => void }) 
             >
               <MaterialIcon name={item.icon} className="text-[20px] text-primary" />
               {item.label}
-            </a>
+            </Link>
           ))}
         </div>
       )}

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function FinalCta() {
   return (
     <section className="w-full bg-surface py-16">
@@ -11,14 +13,14 @@ export function FinalCta() {
             2 minutos.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <a
-              href="#catalogo"
+            <Link
+              href="/tutores"
               className="rounded-full bg-primary px-8 py-4 text-title-md font-semibold text-on-primary shadow-primary-ring transition-all hover:bg-on-primary-fixed-variant"
             >
               Buscar Mi Tutor Ahora
-            </a>
+            </Link>
             <a
-              href="#"
+              href="#disciplinas"
               className="rounded-full bg-surface-container-low px-6 py-4 text-title-md font-semibold text-on-surface transition-colors hover:bg-surface-container"
             >
               Explorar Paquetes para Exámenes

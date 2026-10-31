@@ -9,12 +9,16 @@ description: Infraestructura, CI/CD y despliegue de AuraLearn (VPS/Azure/AWS)
 
 | Componente | Destino |
 |------------|---------|
-| Frontend `web/` | **Vercel** (Next.js nativo, `web/vercel.json`) |
-| Backend `api/` | **Contenedor Docker en Railway** (ADR-008; alternativas: Azure Container Apps, VPS con compose) |
+| Frontend `web/` | **Vercel** (Next.js nativo, Root Directory `web`, `web/vercel.json`) |
+| Backend `api/` | **Vercel Container Runtime** (Root Directory `api`, Framework Preset `Container`, construye `api/Dockerfile` — ADR-009) |
 | PostgreSQL | **Neon** (connection string por variable de entorno) o Postgres en compose/VPS |
+| Archivos (documentos/fotos) | **Vercel Blob** (store privado) vía `VercelBlobFileStorage`; disco local solo en desarrollo |
 | Portal `portal/` (futuro) | Vercel/Netlify, independiente de `web/` |
 
-> ⚠️ Vercel **no** soporta contenedores ni .NET: solo aloja el frontend. La API .NET vive en su contenedor en Railway (ver `docs/plans/2026-10-16-deploy-containers/deploy-guide.md`).
+> ⚠️ Vercel **sí** ejecuta contenedores (Container Runtime, Beta en todos los
+> planes) — ADR-009 supersede la premisa contraria de ADR-008. Railway, Azure
+> Container Apps y VPS con compose siguen siendo alternativas válidas; el
+> `Dockerfile` es portable entre ellas.
 
 ## Reglas generales
 
@@ -22,19 +26,25 @@ description: Infraestructura, CI/CD y despliegue de AuraLearn (VPS/Azure/AWS)
 2. Configuración por entorno: `NODE_ENV`, `ASPNETCORE_ENVIRONMENT`; connection strings solo por variable de entorno.
 3. Los workflows de GitHub Actions viven en `.github/workflows/`; pipelines declarativos, sin scripts imperfativos largos inline.
 4. IaC (si aplica) en Bicep/Terraform versionado; los recursos efímeros se destruyen.
+5. **Límite de 4.5 MB por request** en Vercel Functions: cualquier subida de
+   archivos debe usar subida directa al store + `POST .../attach`, no multipart
+   contra el API. No subir `MaxSizeBytes` sin revisar este límite.
 
-## Backend (contenedor en Railway — ADR-008)
+## Backend (contenedor en Vercel — ADR-009)
 
-- Imagen multi-stage `api/Dockerfile` (SDK 10 build → aspnet 10 runtime), usuario no-root, `entrypoint.sh` con `PORT` dinámico.
-- Migraciones: opt-in explícito (`APPLY_MIGRATIONS=true` → one-shot y termina); nunca automáticas silenciosas en cada arranque. `Down()` + rollback manual comentado en cada migración.
-- Variables del servicio: `ConnectionStrings__Default` (Neon), `Jwt__Key`, `Cors__Origins` (dominios Vercel separados por `;`), `Storage__DocumentsRoot` (`/data/documents` con volumen), `ASPNETCORE_ENVIRONMENT=Production`.
-- Volumen Railway en `/data` para documentos (filesystem efímero sin él); migrar a object storage si se necesita durabilidad multi-instancia.
+- Imagen multi-stage `api/Dockerfile` (SDK 10 build → aspnet 10 runtime), usuario no-root, `entrypoint.sh` con `PORT` dinámico. No usar imágenes *chiseled*: no traen shell y el entrypoint lo necesita.
+- **Definir `PORT=8080` en el proyecto de Vercel.** Vercel enruta a 80 por defecto mientras la base ASP.NET escucha en 8080 → 502 en todas las rutas. `EXPOSE` no influye en el routing.
+- `ASPNETCORE_URLS` lo fija el entrypoint: es la única fuente de binding. `Program.cs` solo añade `app.Urls` como fallback si esa variable falta (evita doble registro en Kestrel).
+- Migraciones: **no** se ejecutan en el arranque del servicio desplegado (Vercel no permite sobreescribir el comando). El job `migrate` de `.github/workflows/api-ci.yml` corre `ApplyMigrations=true` one-shot contra Neon. `Down()` + rollback manual comentado en cada migración.
+- Variables del servicio: `ConnectionStrings__Default` (Neon), `Jwt__Key`, `Jwt__Issuer`, `Cors__Origins` (dominios separados por `;`), `BLOB_READ_WRITE_TOKEN`, `ASPNETCORE_ENVIRONMENT=Production`, `PORT=8080`.
+- `Storage:Provider` (`Local` | `VercelBlob`) fuerza la implementación; sin él se infiere por la presencia de `BLOB_READ_WRITE_TOKEN`. Si se fuerza `VercelBlob` sin token, el arranque falla a propósito.
+- Volumen/disco: el filesystem de Vercel es efímero (solo `/tmp`, 500 MB). Nunca guardar archivos ahí — usar Blob.
 - Backups: Neon incluye PITR según plan; probar restauración al menos una vez.
 
 ## CI/CD mínimo esperado
 
 - `web`: `.github/workflows/web-ci.yml` (lint + tsc + build en cada PR); deploy automático a preview en PR y a producción en merge a main vía integración Git de Vercel.
-- `api`: `.github/workflows/api-deploy.yml` — build + tests en cada PR; en push a main: imagen Docker a GHCR → migraciones one-shot → redeploy en Railway. Secretos: `RAILWAY_TOKEN`, `RAILWAY_SERVICE`.
+- `api`: `.github/workflows/api-ci.yml` — build + tests en cada PR; en push a main: build + tests + job `migrate` (migraciones one-shot contra Neon). El contenedor lo construye y despliega Vercel con su integración Git; el workflow **no** publica imágenes. Secretos: `NEON_CONNECTION_STRING`.
 
 ## Verificación
 

@@ -15,8 +15,9 @@ maxLines: 80
 | [ADR-002](#adr-002) | shadcn/ui base-nova sobre @base-ui/react como sistema de componentes | Vigente | 2026-09-27 |
 | [ADR-003](#adr-003) | Solución .NET Clean Architecture 4 proyectos + EF Core PostgreSQL | Vigente | 2026-09-28 |
 | [ADR-006](#adr-006) | Pago de reservas con saldo del monedero (solo pago total) | Vigente | 2026-10-01 |
-| [ADR-007](#adr-007) | Storage de documentos de verificación en disco local tras IFileStorage | Vigente | 2026-10-11 |
-| [ADR-008](#adr-008) | Despliegue: API en contenedor (Railway) + Neon + frontend en Vercel | Vigente | 2026-10-16 |
+| [ADR-007](#adr-007) | Storage de documentos de verificación en disco local tras IFileStorage | Superado por ADR-009 | 2026-10-11 |
+| [ADR-008](#adr-008) | Despliegue: API en contenedor (Railway) + Neon + frontend en Vercel | Superado por ADR-009 | 2026-10-16 |
+| [ADR-009](#adr-009) | API .NET en Vercel Container Runtime + Vercel Blob para archivos | Vigente | 2026-10-30 |
 
 ## ADRs supersedidas
 
@@ -131,3 +132,32 @@ Ninguna todavía.
 - **Local:** `docker-compose.yml` (api + postgres 16) espeja el despliegue.
 
 **Consecuencias:** `LocalFileStorage` requiere volumen en Railway (`/data`) — filesystem efímero sin él; para durabilidad fuerte migrar `IFileStorage` a object storage (ADR futuro). Neon free tier auto-suspende la BD tras inactividad (~1 s de cold start). Rotar `Jwt__Key` invalida sesiones (8 h). Guía operativa en `docs/plans/2026-10-16-deploy-containers/deploy-guide.md`. `infra.instructions.md` queda actualizado con esta topología (VPS/Azure/AWS siguen siendo alternativas válidas).
+
+> **Superado por ADR-009 (2026-10-30).** La premisa de este ADR —"Vercel no
+> soporta contenedores Docker ni .NET"— dejó de ser cierta: Vercel lanzó
+> **Container Runtime** (OCI/Dockerfile, Beta en todos los planes) y publicó
+> una guía oficial para ASP.NET Core. Railway deja de ser necesario.
+
+---
+
+## ADR-009
+
+**Título:** API .NET en Vercel Container Runtime + Vercel Blob para archivos
+**Estado:** Vigente (supersede ADR-007 y ADR-008)
+**Fecha:** 2026-10-30
+
+**Contexto:** el usuario quiere la API .NET y el frontend en un único proveedor (Vercel), con un repo personal en GitHub. Verificado contra la documentación oficial: `Container Runtime` ejecuta imágenes OCI construidas desde un `Dockerfile` (`x-api-version 13` en la API de Blob; `/docs/functions/runtimes/container`) y existe una guía oficial *Deploy ASP.NET Core on Vercel with Docker*. Dos restricciones de la plataforma chocan con el código previo: **4.5 MB de cuerpo máximo por request** (el límite de documentos y fotos era 5 MB) y **filesystem efímero** con solo `/tmp` escribible (ADR-007 persistía en disco).
+
+**Decisión:**
+- **Dos proyectos Vercel sobre el mismo repo:** `web` (Root Directory `web`, framework Next.js, deploy nativo) y `api` (Root Directory `api`, Framework Preset **Container**, construye `api/Dockerfile`). Sin `vercel.json` con `framework: container`: el `Dockerfile` en el root del proyecto basta.
+- **Puerto:** el proyecto `api` define `PORT=8080`. Vercel enruta a 80 por defecto y la base ASP.NET escucha en 8080: sin esa variable todas las rutas devuelven 502. `EXPOSE` no influye en el routing.
+- **Storage:** `VercelBlobFileStorage` implementa `IFileStorage` contra la **REST API de Blob** con `HttpClient` (no hay SDK oficial .NET; se replica el contrato del SDK JS para no añadir dependencias y permitir migrar a S3/R2 sin tocar Application). Store **privado**: la lectura siempre pasa por el API, así la autorización de PII sigue en .NET.
+- **Selección en DI:** `Program.cs` usa Blob si hay `BLOB_READ_WRITE_TOKEN` (o `Storage:Provider=VercelBlob`); en caso contrario `LocalFileStorage`. Faltando el token en producción el arranque **falla explícitamente** en vez de degradar a un disco efímero.
+- **Subida directa (rompe el límite de 4.5 MB):** `web/app/api/blob/upload/route.ts` emite tokens de cliente con `@vercel/blob/client`; el navegador sube el archivo directo al store y luego confirma con `POST /api/tutors/me/{documents,photo}/attach`. El API .NET **no confía en el cliente**: lee los metadatos reales (`GetInfoAsync`, GET `/?url=`), compara tamaño y tipo contra la whitelist y exige que el pathname cuelgue del `{userId}` autenticado.
+- **Autenticación del endpoint de tokens:** `onBeforeGenerateToken` verifica el JWT contra `GET /api/auth/me` del API (fuente única de verdad, sin duplicar la firma ni añadir `jose`); el token viaja en `clientPayload` porque el SDK no reenvía cabeceras propias.
+- **Degradación:** el frontend sondea `GET /api/blob/upload`; si no hay store (dev local) cae al multipart clásico contra `LocalFileStorage`.
+- **Sin webhook `onUploadCompleted`:** no se dispara en localhost y añadiría un segundo camino de escritura en BD; la confirmación explícita lo reemplaza.
+- **Migraciones:** Vercel no permite sobreescribir el comando de arranque, así que el modo one-shot (`ApplyMigrations=true`) corre en el job `migrate` de GitHub Actions contra Neon; el workflow `api-ci.yml` deja de publicar imágenes y de desplegar (Vercel construye desde Git).
+
+**Consecuencias:** Container Runtime está en **Beta**. Scale-to-zero (5 min en producción): cold start .NET de ~1-3 s tras inactividad. Flujo con dos proyectos Vercel sobre el mismo repo. Hobby no permite conectar repos de organizaciones Git (el repo es personal: no aplica). Sin Secure Compute ni Static IPs con imágenes propias. Los documentos siguen fuera de la BD y del repo; `LocalFileStorage` queda solo para desarrollo. Railway/Azure Container Apps/VPS siguen siendo alternativas documentadas en `infra.instructions.md`.
+

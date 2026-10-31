@@ -10,6 +10,35 @@ maxLines: 70
 Changelog por versión. Clasificación permitida: `feat`, `fix`, `refactor`, `db`, `test`, `docs`.
 > Histórico antiguo NO es carga automática (ver `CONTEXT_BUDGET.md`). Mantener detallada solo la versión actual.
 
+## v0.13.0 — 2026-10-30
+
+- **feat(infra):** API .NET desplegada en **Vercel Container Runtime** y archivos en **Vercel Blob** (ADR-009, supersede ADR-007/008). Plan en `docs/plans/2026-10-30-vercel-container/`.
+  - **Corrección de premisa:** ADR-008 afirmaba que Vercel no soporta contenedores ni .NET. Vercel lanzó Container Runtime (imágenes OCI desde `Dockerfile`, Beta en todos los planes) y publicó guía oficial para ASP.NET Core. Railway deja de ser necesario.
+  - **Puerto:** `ENV PORT=8080` en `api/Dockerfile` + variable `PORT` en el proyecto Vercel. Vercel enruta a 80 y la base ASP.NET escucha en 8080 → sin esto, **502 en todas las rutas**. `EXPOSE` no influye en el routing.
+  - **Binding único:** `Program.cs` solo hace `app.Urls.Add` si `ASPNETCORE_URLS` no está definido (antes podía registrar el binding dos veces junto al `entrypoint.sh`).
+  - **`VercelBlobFileStorage`** (`Infrastructure/Persistence`): implementa `IFileStorage` contra la REST API de Blob (v13) con `HttpClient`. Sin SDK oficial .NET, sin dependencias nuevas. Store **privado**: la lectura pasa por el API, así la autorización de PII sigue en .NET.
+  - **`IFileStorage.GetInfoAsync`** (nuevo): metadatos reales del archivo en el store; también implementado en `LocalFileStorage` para mantener paridad dev/prod.
+  - **Selección en DI:** `CreateFileStorage` usa Blob si hay `BLOB_READ_WRITE_TOKEN` o `Storage:Provider=VercelBlob`; falla al arrancar si se fuerza Blob sin token (nunca degrada a disco efímero).
+  - **Subida directa (rompe el límite de 4.5 MB):** nueva ruta `web/app/api/blob/upload` con `@vercel/blob/client` que emite tokens de cliente. `onBeforeGenerateToken` verifica el JWT contra `GET /api/auth/me` y exige que el pathname cuelgue del usuario autenticado. Nuevos endpoints `POST /api/tutors/me/documents/attach` y `POST /api/tutors/me/photo/attach` que validan tamaño/tipo contra los metadatos reales del store. `uploadTutorPhoto` cae al multipart clásico si no hay store (dev local).
+  - **Migraciones:** `api-deploy.yml` deja de publicar imágenes a GHCR y de desplegar a Railway; ahora es `api-ci` (build+tests en PR; build+tests+job `migrate` one-shot contra Neon en `main`). Secret `NEON_CONNECTION_STRING` reemplaza a `RAILWAY_TOKEN`/`RAILWAY_SERVICE`.
+  - **Docs:** `infra.instructions.md` reescrito para la nueva topología; nueva guía `docs/plans/2026-10-30-vercel-container/deploy-guide.md`; la guía de Railway queda marcada como superada.
+  - **Tests:** **158/158** (9 nuevos del camino `attach`: pathname propio, pathname ajeno rechazado, tamaño declarado ≠ real, content-type no permitido, blob inexistente, identificación bloqueada). Gates verdes: `dotnet build` sin warnings, `lint` 0 errores, `tsc --noEmit` limpio, `npm run build` con 22 rutas.
+  - **Validación contra el store real** (la parte sin tests unitarios): contrato REST verificado con el store privado — `PUT /?pathname=` 200 con pathname exacto, `GET /?url=` 200 con `size`/`contentType`, inexistente → 404, `POST /delete` 200. Flujo E2E con `upload()` del SDK: sonda `enabled:true`; sin JWT → 400 `No autenticado`; JWT propio → 200 con `clientToken`; pathname ajeno → 400; categoría inválida → 400; **subida de 4.8 MB (5033165 B) completa** y `head()` confirma tamaño y tipo.
+  - **Corrección de un supuesto:** un archivo de 6 MB **no** debe subir (tope de negocio 5 MB aplicado por `maximumSizeInBytes` del token de cliente). El rango que se desbloquea es **4.5–5 MB**, no "cualquier tamaño". Registrado como GOTCHA-012.
+  - **Alineación de categorías:** la ruta de tokens esperaba `documents`/`photo`, pero el .NET genera `titulo`/`certificacion`/`identificacion`/`photo`. Corregido en `ALLOWED_CONTENT_TYPES` y en `buildBlobPathname`, para que ambos lados produzcan el mismo pathname.
+
+## v0.12.2 — 2026-10-30
+
+- **fix:** navegación del `SiteHeader` (menú de la landing) no routeaba correctamente.
+  - **`#catalogo` frágil:** el ancla vivía en el grid de tutores de `Mentors`, que solo se renderiza con `state === "success"` y con tutores; con API caída o catálogo vacío el enlace no hacía nada. Ahora el `id` está en la `<section>` de los tres estados.
+  - **`#como-funciona` mal ubicado:** estaba en la `SearchCard` del hero (arriba), no en `Steps`. Se movió a la sección de pasos; la tarjeta quedó como `id="buscador"`.
+  - **Header reutilizado fuera de la portada:** `SiteHeader` se usa en todo el sitio (`/tutores`, paneles, checkout, `/postular`), donde los hash de la landing no existen. `NAV_ITEMS` separa `href` (ruta real) de `hash`, y los hash se resuelven a `/#seccion` cuando `usePathname() !== "/"`.
+  - **"Buscar Tutores" y CTA "Reservar un Tutor" → `/tutores`** (directorio real) en lugar del grid de destacados; lo mismo en el CTA del hero, el CTA final y "Ver todas las 140+ materias" (`/tutores`).
+  - **Navegación cliente:** `<a>` interno → `Link` en header (nav, login, CTA, `PanelMenu`), `disciplines`, `final-cta`, `tutor-cta` y footer (elimina recargas completas).
+  - **`scroll-mt-24`** en las secciones ancla para que el header sticky no tape el título (verificado: top ≈ 96 px).
+  - **Footer sin enlaces muertos:** los ítems con `href="#"` (que saltaban al inicio) se renderizan como texto; solo "Buscar Tutores", "Materias Populares" y "Publicar tu Perfil" navegan.
+  - **Gates:** lint 0 errores (10 warnings preexistentes), `tsc --noEmit` limpio. Smoke Playwright en `:3001`: anclas (#como-funciona/#disciplinas → top 95.75), `/tutores`, `/postular`, y hash desde página interna (`/#como-funciona`) verdes.
+
 ## v0.12.1 — 2026-10-16
 
 - **feat:** contenedores para desplegar la API + frontend en Vercel. Plan `docs/plans/2026-10-16-deploy-containers/`, ADR-008.

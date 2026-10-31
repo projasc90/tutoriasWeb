@@ -30,7 +30,10 @@ const STEPS = [
 
 export function Steps() {
   return (
-    <section className="w-full bg-surface-container-low py-20">
+    <section
+      id="como-funciona"
+      className="w-full scroll-mt-24 bg-surface-container-low py-20"
+    >
       <div className="mx-auto max-w-[1400px] px-6 lg:px-12">
         <header className="mx-auto mb-16 max-w-2xl text-center">
           <SectionEyebrow className="mb-2">Paso a Paso</SectionEyebrow>

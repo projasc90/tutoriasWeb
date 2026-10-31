@@ -92,3 +92,19 @@ Formato: **Contexto → Error observado → Causa → Solución → Aprendido en
 - **Causa:** `Program.cs` registra servicios explícitamente (`AddScoped`); el compilador no valida el grafo de DI.
 - **Solución:** al crear un servicio/validador nuevo, añadirlo a la sección "Application (servicios + validadores)" de `Program.cs` en el mismo cambio; verificar con curl el endpoint antes de cerrar.
 - **Aprendido en:** 2026-10-16 (`AdminUserService` olvidado en DI → 500 en smoke).
+
+## GOTCHA-011 — Anclas de la landing en un header compartido
+
+- **Contexto:** tocar `SiteHeader` (`components/landing/currency-toggle.tsx`) o agregar secciones con `id` en `components/landing/`.
+- **Error observado:** los ítems del menú principal "no hacían nada" o llevaban a un lugar inesperado: `#catalogo` no existía (el `id` vivía en el grid de `Mentors`, que solo se renderiza en estado success con tutores) y `#como-funciona` apuntaba a la `SearchCard` del hero, no a `Steps`.
+- **Causa:** el header es global (se usa en `/tutores`, paneles, checkout, `/postular`), pero sus enlaces eran hash puros de la portada; además los `id` se colocaron en ramas condicionales del render.
+- **Solución:** (a) `NAV_ITEMS` separa `href` (ruta real) de `hash`, resuelto con `usePathname()` → `#seccion` en `/` y `/#seccion` en el resto; (b) las rutas que existen como página usan `Link` a esa página (`/tutores`, `/postular`), no a un ancla; (c) el `id` de sección va en la `<section>` de todos los estados de carga/error/vacío; (d) `scroll-mt-24` en cada sección ancla por el header sticky (top ≈ 96 px); (e) sin `href="#"` (renderizar texto si la página no existe).
+- **Aprendido en:** 2026-10-30 (fix de navegación del menú, 0.12.2).
+
+## GOTCHA-012 — El token de Blob impone su propio `maximumSizeInBytes`
+
+- **Contexto:** validar la subida directa a Vercel Blob (ADR-009) con archivos grandes.
+- **Error observado:** `BlobFileTooLargeError: File is too large, the file length cannot be greater than 5242880 bytes` al intentar subir un PDF de 6 MB.
+- **Causa:** el tope de **5 MB** (5242880 B) no es de Vercel: es el `maximumSizeInBytes` que devuelve `onBeforeGenerateToken` en `web/app/api/blob/upload/route.ts`, espejo de `TutorDocumentService.MaxSizeBytes`. El SDK lo aplica en el cliente **antes** de subir.
+- **Solución:** no confundir el límite de la plataforma (**4.5 MB** por request en Vercel Functions) con el tope de negocio (**5 MB**). El rango que la subida directa desbloquea es **4.5–5 MB**; por encima de 5 MB la app rechaza por regla propia. Al verificar E2E usar un archivo de ~4.8 MB.
+- **Aprendido en:** 2026-10-30 (E2E de subida directa contra el store real).

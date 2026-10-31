@@ -1,5 +1,13 @@
 # Guía de despliegue — Railway (API) + Neon (Postgres) + Vercel (web)
 
+> ⚠️ **SUPERADA (2026-10-30).** Esta guía describe la topología de ADR-008, que
+> partía de una premisa hoy falsa: Vercel no soporta contenedores ni .NET.
+> Vercel lanzó **Container Runtime** (imágenes OCI desde un `Dockerfile`, Beta en
+> todos los planes) y ya existe guía oficial para ASP.NET Core.
+> **Guía vigente:** `docs/plans/2026-10-30-vercel-container/deploy-guide.md`
+> (ADR-009). Se conserva este documento como referencia del camino alternativo
+> con Railway.
+
 > Contexto: Vercel no soporta contenedores ni .NET. La API .NET vive en un
 > contenedor Docker en Railway; la BD es Neon (Postgres gestionado); el
 > frontend Next.js se despliega en Vercel. CI/CD con GitHub Actions.

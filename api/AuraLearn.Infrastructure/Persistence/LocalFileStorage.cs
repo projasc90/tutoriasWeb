@@ -46,6 +46,30 @@ public class LocalFileStorage(string root) : IFileStorage
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Los archivos locales solo existen si este proceso los escribió; la
+    /// subida directa desde el cliente no aplica, así que basta con el tamaño
+    /// en disco (tipo MIME derivado de la extensión).
+    /// </summary>
+    public Task<StoredFileInfo?> GetInfoAsync(string storagePath, CancellationToken ct)
+    {
+        var absolutePath = ToAbsolutePath(storagePath);
+        if (!File.Exists(absolutePath))
+            return Task.FromResult<StoredFileInfo?>(null);
+
+        var info = new FileInfo(absolutePath);
+        var contentType = Path.GetExtension(absolutePath).ToLowerInvariant() switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            _ => "application/octet-stream",
+        };
+
+        return Task.FromResult<StoredFileInfo?>(new StoredFileInfo(info.Length, contentType));
+    }
+
     public async Task<string> SavePhotoAsync(
         Guid tutorId, string fileName, Stream content, CancellationToken ct)
     {

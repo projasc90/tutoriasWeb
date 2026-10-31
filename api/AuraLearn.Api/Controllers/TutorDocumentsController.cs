@@ -79,4 +79,40 @@ public class TutorDocumentsController(TutorDocumentService service) : Controller
 
         return CreatedAtAction(nameof(List), result.Value);
     }
+
+    /// <summary>
+    /// Confirma una subida directa de documento (ADR-009): el navegador subió
+    /// el archivo al store y aquí solo se envía la referencia. Evita el límite
+    /// de 4.5 MB por request de Vercel Functions (nuestro tope es 5 MB).
+    /// </summary>
+    [HttpPost("attach")]
+    [ProducesResponseType(typeof(TutorDocumentItemDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<TutorDocumentItemDto>> Attach(
+        [FromBody] AttachDocumentCommand command, CancellationToken ct)
+    {
+        var result = await service.AttachAsync(GetUserId(), command, ct);
+
+        if (result.IsNotFound)
+            return NotFound(new ProblemDetails
+            {
+                Title = "No tienes una postulación de tutor",
+                Status = StatusCodes.Status404NotFound,
+            });
+
+        if (result.IsInvalid)
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Adjunto inválido: PDF/JPEG/PNG, ≤ 5 MB, o el archivo no pertenece a tu cuenta",
+                Status = StatusCodes.Status400BadRequest,
+            });
+
+        if (result.IsConflict)
+            return Conflict(new { error = result.ErrorCode ?? TutorDocumentErrors.DocumentsLocked });
+
+        return CreatedAtAction(nameof(List), result.Value);
+    }
 }

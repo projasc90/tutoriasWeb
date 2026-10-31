@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { MaterialIcon } from "@/components/material-icon";
 
 const FREQUENT_TAGS = [
@@ -86,8 +88,8 @@ export function Hero() {
 function SearchCard() {
   return (
     <div
-      id="como-funciona"
-      className="mb-6 w-full rounded-xl bg-surface-container-lowest p-4 sm:p-6 shadow-elev-lg"
+      id="buscador"
+      className="mb-6 w-full scroll-mt-24 rounded-xl bg-surface-container-lowest p-4 sm:p-6 shadow-elev-lg"
     >
       <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
@@ -128,13 +130,13 @@ function SearchCard() {
               </button>
             ))}
           </div>
-          <a
-            href="#catalogo"
+          <Link
+            href="/tutores"
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-6 py-3 text-title-md font-semibold text-on-primary hover:bg-on-primary-fixed-variant transition-all shadow-primary-glow"
           >
             <span>Encontrar Tutor Ideal</span>
             <MaterialIcon name="arrow_forward" className="text-[18px]" />
-          </a>
+          </Link>
         </div>
       </form>
     </div>

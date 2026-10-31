@@ -41,7 +41,7 @@ export function Mentors() {
 
   if (state.status === "loading") {
     return (
-      <section className="w-full bg-surface py-20">
+      <section id="catalogo" className="w-full scroll-mt-24 bg-surface py-20">
         <div className="mx-auto max-w-[1400px] px-6 lg:px-12">
           <div className="mb-12">
             <SectionEyebrow>Docentes Destacados</SectionEyebrow>
@@ -61,7 +61,7 @@ export function Mentors() {
 
   if (state.status === "error") {
     return (
-      <section className="w-full bg-surface py-20">
+      <section id="catalogo" className="w-full scroll-mt-24 bg-surface py-20">
         <div className="mx-auto max-w-[1400px] px-6 lg:px-12">
           <div className="mb-12">
             <SectionEyebrow>Docentes Destacados</SectionEyebrow>
@@ -89,7 +89,7 @@ export function Mentors() {
   const { tutors, total } = state;
 
   return (
-    <section className="w-full bg-surface py-20">
+    <section id="catalogo" className="w-full scroll-mt-24 bg-surface py-20">
       <div className="mx-auto max-w-[1400px] px-6 lg:px-12">
         <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
@@ -112,10 +112,7 @@ export function Mentors() {
             </p>
           </div>
         ) : (
-          <div
-            id="catalogo"
-            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
-          >
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {tutors.map((t, i) => (
               <MentorCard key={t.id} tutor={t} index={i} />
             ))}

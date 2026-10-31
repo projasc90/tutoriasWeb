@@ -170,4 +170,70 @@ public class TutorPhotoServiceTests
 
         Assert.True(result.IsNotFound);
     }
+
+    // ── AttachAsync: subida directa confirmada (ADR-009) ──────────
+
+    [Fact]
+    public async Task Attach_WithOwnedPathAndMatchingMetadata_UpdatesPhoto()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = $"{userId:N}/photo/{Guid.NewGuid():N}.jpg";
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>())
+            .Returns(new StoredFileInfo(2048, "image/jpeg"));
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachPhotoCommand(pathname, "foto.jpg", "image/jpeg", 2048),
+            CancellationToken.None);
+
+        Assert.True(result.IsUpdated);
+        Assert.Equal($"/api/tutors/{tutor.Id}/photo", result.Value!.PhotoUrl);
+        Assert.Equal(pathname, tutor.PhotoPath);
+        await _tutors.Received(1).UpdateAsync(tutor, Arg.Any<CancellationToken>());
+        await _storage.DidNotReceive().SavePhotoAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Attach_WithPathFromAnotherUser_IsInvalid()
+    {
+        var tutor = CreateTutor();
+        var foreignPathname = $"{Guid.NewGuid():N}/photo/{Guid.NewGuid():N}.jpg";
+
+        _tutors.GetByUserIdAsync(tutor.UserId!.Value, Arg.Any<CancellationToken>()).Returns(tutor);
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            tutor.UserId!.Value,
+            new AttachPhotoCommand(foreignPathname, "foto.jpg", "image/jpeg", 2048),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+        await _tutors.DidNotReceive().UpdateAsync(Arg.Any<Tutor>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Attach_WhenStoredContentTypeIsNotAnImage_IsInvalid()
+    {
+        var tutor = CreateTutor();
+        var userId = tutor.UserId!.Value;
+        var pathname = $"{userId:N}/photo/{Guid.NewGuid():N}.jpg";
+
+        _tutors.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns(tutor);
+        // El cliente declara image/jpeg pero el store tiene un PDF: se rechaza.
+        _storage.GetInfoAsync(pathname, Arg.Any<CancellationToken>())
+            .Returns(new StoredFileInfo(2048, "application/pdf"));
+
+        var service = CreateService();
+        var result = await service.AttachAsync(
+            userId,
+            new AttachPhotoCommand(pathname, "foto.jpg", "image/jpeg", 2048),
+            CancellationToken.None);
+
+        Assert.True(result.IsInvalid);
+    }
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { MaterialIcon } from "@/components/material-icon";
 
 const PROS = [
@@ -43,13 +45,13 @@ export function TutorCta() {
                 ))}
               </div>
               <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
-                <a
+                <Link
                   href="/postular"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-container px-8 py-4 text-on-primary text-title-md font-semibold shadow-lg transition-colors hover:bg-primary"
                 >
                   <span>Postular como Docente</span>
                   <MaterialIcon name="arrow_forward" className="text-[18px]" />
-                </a>
+                </Link>
                 <a
                   href="#"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-surface-container-lowest/10 px-6 py-4 text-inverse-on-surface text-title-md font-semibold transition-colors hover:bg-surface-container-lowest/20"

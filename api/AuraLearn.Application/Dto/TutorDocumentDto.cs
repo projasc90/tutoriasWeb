@@ -22,6 +22,19 @@ public record UploadDocumentCommand(
     long SizeBytes,
     Stream Content);
 
+/// <summary>
+/// Confirmación de una subida directa desde el navegador (ADR-009): el archivo
+/// ya está en el store y solo se envía la referencia. <c>SizeBytes</c> y
+/// <c>ContentType</c> son declarados por el cliente, pero el servicio los
+/// contrasta con los metadatos reales del storage antes de persistir.
+/// </summary>
+public record AttachDocumentCommand(
+    TutorDocumentKind Kind,
+    string StoragePath,
+    string FileName,
+    string ContentType,
+    long SizeBytes);
+
 /// <summary>Contenido de un documento para descarga (el stream lo cierra el FileResult).</summary>
 public record TutorDocumentFile(string FileName, string ContentType, Stream Content);
 

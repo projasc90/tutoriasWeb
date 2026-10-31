@@ -27,7 +27,8 @@ RUN dotnet publish AuraLearn.Api/AuraLearn.Api.csproj \
 # ── Stage 2: runtime ───────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
-# Usuario no-root (requisito de seguridad; Railway lo soporta)
+# Usuario no-root: puerto 80 es privilegiado, por eso el servicio escucha en
+# 8080 y el proyecto de Vercel debe definir PORT=8080 (ADR-009).
 RUN addgroup --system --gid 1001 auralearn \
     && adduser --system --uid 1001 --ingroup auralearn auralearn
 
@@ -36,16 +37,17 @@ COPY --from=build /app/publish .
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Carpeta de documentos (montar volumen en el host: /data/documents)
-RUN mkdir -p /data/documents && chown -R auralearn:auralearn /data /app
-
 USER auralearn
 
-# Railway inyecta PORT; el entrypoint lo respeta vía ASPNETCORE_URLS.
-# El script de entrada permite aplicar migraciones de forma explícita
-# (APPLY_MIGRATIONS=true) antes de arrancar el servidor.
+# El entrypoint fija ASPNETCORE_URLS=http://0.0.0.0:$PORT (default 8080).
+# Los archivos NO se guardan en disco: producción usa Vercel Blob (ADR-009).
+# Puerto: Vercel enruta a 80 por defecto y la base ASP.NET escucha en 8080
+# (ASPNETCORE_HTTP_PORTS). Por eso el proyecto de Vercel debe definir
+# PORT=8080 — sin eso todas las rutas devuelven 502. EXPOSE es solo
+# documental: no influye en el routing del host.
 ENV ASPNETCORE_ENVIRONMENT=Production \
-    DOTNET_EnableDiagnostics=0
+    DOTNET_EnableDiagnostics=0 \
+    PORT=8080
 EXPOSE 8080
 
 ENTRYPOINT ["/app/entrypoint.sh"]

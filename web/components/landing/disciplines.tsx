@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { MaterialIcon } from "@/components/material-icon";
 import { SectionEyebrow, SectionTitle } from "./section-eyebrow";
 
@@ -78,7 +80,10 @@ const DISCIPLINES: Discipline[] = [
 
 export function Disciplines() {
   return (
-    <section id="disciplinas" className="w-full bg-surface-container-low py-16">
+    <section
+      id="disciplinas"
+      className="w-full scroll-mt-24 bg-surface-container-low py-16"
+    >
       <div className="mx-auto max-w-[1400px] px-6 lg:px-12">
         <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
@@ -87,13 +92,13 @@ export function Disciplines() {
               Explora por disciplina especializada
             </SectionTitle>
           </div>
-          <a
-            href="#"
+          <Link
+            href="/tutores"
             className="inline-flex items-center gap-1.5 text-primary hover:underline text-label-md font-bold"
           >
             <span>Ver todas las 140+ materias</span>
             <MaterialIcon name="east" className="text-[18px]" />
-          </a>
+          </Link>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DISCIPLINES.map((d) =>

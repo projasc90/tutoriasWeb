@@ -28,13 +28,11 @@ builder.Services.AddScoped<ITutorAvailabilityExceptionRepository, TutorAvailabil
 builder.Services.AddScoped<ITutorDocumentRepository, TutorDocumentRepository>();
 builder.Services.AddScoped<IBookingRulesRepository, BookingRulesRepository>();
 
-// Storage de documentos en disco local (fuera del repo). Override en prod con
-// la clave Storage:DocumentsRoot (p. ej. /var/lib/auralearn/uploads/documents).
-builder.Services.AddSingleton<IFileStorage>(_ => new LocalFileStorage(
-    builder.Configuration["Storage:DocumentsRoot"]
-    ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".auralearn", "uploads", "documents")));
+// ── Storage de archivos (documentos + fotos) — ADR-009 ─────────────
+// En Vercel Functions el filesystem es efímero, así que producción usa
+// Vercel Blob (store privado) o falla explícitamente si falta el token.
+// Local/dev sigue en disco fuera del repo (Storage:DocumentsRoot).
+builder.Services.AddSingleton<IFileStorage>(_ => CreateFileStorage(builder.Configuration));
 
 // SlotGenerationService es estático; el resto de servicios van scoped
 builder.Services.AddScoped<SinpeComprobanteValidator>();
@@ -135,13 +133,49 @@ if (builder.Configuration["ApplyMigrations"] == "true")
     return;
 }
 
-// ── Puerto dinámico (Railway/contenedores inyectan PORT) ───────────
-// En local sigue funcionando con launchSettings (5037); en contenedor
-// ASPNETCORE_URLS del Dockerfile fija http://0.0.0.0:$PORT.
+// ── Puerto dinámico (Vercel/Railway/contenedores inyectan PORT) ────
+// Fuente de verdad: entrypoint.sh exporta ASPNETCORE_URLS=http://0.0.0.0:$PORT.
+// Este bloque es solo fallback para arrancar el binario sin ese script; si se
+// ejecutan ambas fuentes Kestrel registra el binding dos veces.
+// En local sigue funcionando con launchSettings (5037).
+var aspnetUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
 var port = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrWhiteSpace(port) && !app.Environment.IsDevelopment())
+if (string.IsNullOrWhiteSpace(aspnetUrls)
+    && !string.IsNullOrWhiteSpace(port)
+    && !app.Environment.IsDevelopment())
 {
     app.Urls.Add($"http://0.0.0.0:{port}");
 }
 
 app.Run();
+
+// ── Selección del storage según configuración ──────────────────────
+// Prioridad: Storage:Provider explícito > BLOB_READ_WRITE_TOKEN presente.
+// En producción (Vercel) faltar el token es un error de despliegue, no algo
+// que deba degradar silenciosamente a disco (el filesystem no persiste).
+static IFileStorage CreateFileStorage(IConfiguration configuration)
+{
+    var provider = configuration["Storage:Provider"];
+    var blobToken = configuration["BLOB_READ_WRITE_TOKEN"]
+        ?? configuration["Storage:VercelBlobToken"];
+
+    var useBlob = provider?.Equals("VercelBlob", StringComparison.OrdinalIgnoreCase) == true
+        || (provider is null && !string.IsNullOrWhiteSpace(blobToken));
+
+    if (!useBlob)
+    {
+        return new LocalFileStorage(
+            configuration["Storage:DocumentsRoot"]
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".auralearn", "uploads", "documents"));
+    }
+
+    if (string.IsNullOrWhiteSpace(blobToken))
+        throw new InvalidOperationException(
+            "Storage:Provider=VercelBlob requiere BLOB_READ_WRITE_TOKEN");
+
+    return new VercelBlobFileStorage(
+        blobToken,
+        configuration["Storage:VercelBlobAccess"] ?? "private");
+}

@@ -4,9 +4,8 @@ namespace AuraLearn.Application.Interfaces;
 
 /// <summary>
 /// Puerto de almacenamiento de archivos de verificación de tutores.
-/// La implementación actual es disco local (LocalFileStorage); migrar a
-/// blob/S3 solo requiere otra implementación de este puerto (ADR pendiente
-/// de registrar al cerrar la tarea).
+/// Implementaciones: LocalFileStorage (disco, dev/local) y
+/// VercelBlobFileStorage (object storage, producción en Vercel) — ADR-009.
 /// </summary>
 public interface IFileStorage
 {
@@ -29,4 +28,15 @@ public interface IFileStorage
     /// físico lo genera la implementación.
     /// </summary>
     Task<string> SavePhotoAsync(Guid tutorId, string fileName, Stream content, CancellationToken ct);
+
+    /// <summary>
+    /// Metadatos de un archivo ya presente en el storage, o null si no existe.
+    /// Se usa para confirmar subidas directas desde el cliente (el navegador
+    /// sube a Blob y el API solo valida tamaño y tipo reales antes de persistir).
+    /// </summary>
+    Task<StoredFileInfo?> GetInfoAsync(string storagePath, CancellationToken ct);
 }
+
+/// <summary>Tamaño y tipo MIME reales de un archivo en el storage.</summary>
+public record StoredFileInfo(long SizeBytes, string ContentType);
+

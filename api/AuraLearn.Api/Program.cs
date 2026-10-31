@@ -1,3 +1,4 @@
+using AuraLearn.Api.HealthChecks;
 using AuraLearn.Application.Dto;
 using AuraLearn.Application.Interfaces;
 using AuraLearn.Application.Services;
@@ -5,8 +6,10 @@ using AuraLearn.Domain.Entities;
 using AuraLearn.Infrastructure.Persistence;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -104,7 +107,18 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHealthChecks();
+
+// Health checks divididos por intención:
+//  /health       → readiness: proceso vivo + PostgreSQL accesible (lo que importa
+//                  para decidir si la instancia sirve tráfico).
+//  /health/live  → liveness: solo el proceso responde, sin tocar la BD.
+// Así un monitor que solo vigila el proceso no despierta Neon en cada ping.
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>(
+        "database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready"],
+        timeout: TimeSpan.FromSeconds(5));
 
 var app = builder.Build();
 
@@ -119,6 +133,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
+// Predicate vacío = no ejecuta ningún check registrado.
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 
 // ── Migraciones al desplegar (opt-in explícito) ────────────────────
 // APPLY_MIGRATIONS=true en el arranque del contenedor aplica las migraciones

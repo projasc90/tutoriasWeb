@@ -49,4 +49,5 @@ description: Infraestructura, CI/CD y despliegue de AuraLearn (VPS/Azure/AWS)
 ## Verificación
 
 - Tras desplegar: healthcheck del backend, smoke del frontend (200 en rutas clave), y registro de la incidencia si algo falla.
+- Health del backend: `/health` es **readiness** (proceso + PostgreSQL, `503` si la BD no responde) y `/health/live` es **liveness** (sin dependencias). Un monitor de proceso debe usar `/health/live` para no despertar Neon en cada ping.
 - Cualquier cambio de infraestructura significativo → ADR + entrada en `.ai/STACK.md`.

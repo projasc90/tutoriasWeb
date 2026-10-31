@@ -64,6 +64,13 @@ los archivos no pueden vivir en disco.
 
 5. Deploy y verificar: `curl https://<api>.vercel.app/health` → `Healthy`.
 
+> **Dos rutas de salud:**
+> - `/health` → *readiness*: proceso vivo **y** PostgreSQL accesible (`503` si la BD no responde).
+> - `/health/live` → *liveness*: solo el proceso responde, sin tocar la BD.
+>
+> Usa `/health/live` para un monitor que solo vigila el proceso (no despierta
+> Neon) y `/health` para decidir si la instancia puede servir tráfico.
+
 > El contenedor escucha en `8080` porque la base ASP.NET fija
 > `ASPNETCORE_HTTP_PORTS=8080`, mientras Vercel enruta a `80` por defecto.
 > `EXPOSE` en el Dockerfile no influye en el routing.
@@ -118,7 +125,8 @@ integración Git. `web-ci` solo valida (lint + tsc + build).
 
 ## Verificación final
 
-- [ ] `GET /health` en el proyecto `api` → 200 `Healthy`
+- [ ] `GET /health` en el proyecto `api` → 200 `Healthy` (readiness: incluye PostgreSQL)
+- [ ] `GET /health/live` → 200 `Healthy` (liveness, sin dependencias)
 - [ ] `GET /api/tutors` → 200 con datos de Neon
 - [ ] Login desde el dominio de `web` → JWT emitido (CORS correcto)
 - [ ] `GET /api/blob/upload` en `web` → `{"enabled":true}`

@@ -27,17 +27,18 @@ RUN dotnet publish AuraLearn.Api/AuraLearn.Api.csproj \
 # ── Stage 2: runtime ───────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
-# Usuario no-root: puerto 80 es privilegiado, por eso el servicio escucha en
-# 8080 y el proyecto de Vercel debe definir PORT=8080 (ADR-009).
-RUN addgroup --system --gid 1001 auralearn \
-    && adduser --system --uid 1001 --ingroup auralearn auralearn
+# Usuario no-root: desde .NET 8 las imágenes oficiales ya traen `app` (UID 1654).
+# No se crea uno a mano: `adduser`/`addgroup` son del paquete `adduser`, ausente
+# en las variantes slim, y el build falla con "addgroup: not found" (exit 127).
+# Puerto 80 es privilegiado, por eso el servicio escucha en 8080 y el proyecto
+# de Vercel debe definir PORT=8080 (ADR-009).
 
 WORKDIR /app
-COPY --from=build /app/publish .
-COPY entrypoint.sh /app/entrypoint.sh
+COPY --from=build --chown=app:app /app/publish .
+COPY --chown=app:app entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-USER auralearn
+USER app
 
 # El entrypoint fija ASPNETCORE_URLS=http://0.0.0.0:$PORT (default 8080).
 # Los archivos NO se guardan en disco: producción usa Vercel Blob (ADR-009).

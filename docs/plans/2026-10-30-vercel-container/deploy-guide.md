@@ -67,6 +67,11 @@ los archivos no pueden vivir en disco.
 > El contenedor escucha en `8080` porque la base ASP.NET fija
 > `ASPNETCORE_HTTP_PORTS=8080`, mientras Vercel enruta a `80` por defecto.
 > `EXPOSE` en el Dockerfile no influye en el routing.
+>
+> **Sobre el usuario del contenedor:** el Dockerfile usa `USER app`, el usuario
+> no-root que ya traen las imágenes oficiales de .NET 8+ (UID 1654). No crear
+> usuarios con `adduser`/`addgroup`: ese paquete no está en las imágenes slim y
+> el build falla con `addgroup: not found` (exit 127) — ver GOTCHA-013.
 
 ## Paso 3 — Proyecto Vercel `web`
 

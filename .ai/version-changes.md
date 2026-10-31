@@ -12,6 +12,8 @@ Changelog por versión. Clasificación permitida: `feat`, `fix`, `refactor`, `db
 
 ## v0.13.0 — 2026-10-30
 
+- **fix(docker):** el primer build en Vercel Container fallaba con `addgroup: not found` (exit 127). `adduser`/`addgroup` son del paquete Debian `adduser`, ausente en las imágenes slim. Ahora se usa `USER app` (UID/GID 1654, incluido en las imágenes oficiales de .NET 8+, creado con `groupadd`/`useradd` en el template oficial) y `COPY --chown=app:app`; se elimina la creación manual del usuario. GOTCHA-013.
+
 - **feat(infra):** API .NET desplegada en **Vercel Container Runtime** y archivos en **Vercel Blob** (ADR-009, supersede ADR-007/008). Plan en `docs/plans/2026-10-30-vercel-container/`.
   - **Corrección de premisa:** ADR-008 afirmaba que Vercel no soporta contenedores ni .NET. Vercel lanzó Container Runtime (imágenes OCI desde `Dockerfile`, Beta en todos los planes) y publicó guía oficial para ASP.NET Core. Railway deja de ser necesario.
   - **Puerto:** `ENV PORT=8080` en `api/Dockerfile` + variable `PORT` en el proyecto Vercel. Vercel enruta a 80 y la base ASP.NET escucha en 8080 → sin esto, **502 en todas las rutas**. `EXPOSE` no influye en el routing.

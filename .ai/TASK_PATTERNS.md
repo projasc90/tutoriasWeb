@@ -108,3 +108,11 @@ Formato: **Contexto → Error observado → Causa → Solución → Aprendido en
 - **Causa:** el tope de **5 MB** (5242880 B) no es de Vercel: es el `maximumSizeInBytes` que devuelve `onBeforeGenerateToken` en `web/app/api/blob/upload/route.ts`, espejo de `TutorDocumentService.MaxSizeBytes`. El SDK lo aplica en el cliente **antes** de subir.
 - **Solución:** no confundir el límite de la plataforma (**4.5 MB** por request en Vercel Functions) con el tope de negocio (**5 MB**). El rango que la subida directa desbloquea es **4.5–5 MB**; por encima de 5 MB la app rechaza por regla propia. Al verificar E2E usar un archivo de ~4.8 MB.
 - **Aprendido en:** 2026-10-30 (E2E de subida directa contra el store real).
+
+## GOTCHA-013 — `addgroup`/`adduser` no existen en las imágenes slim de .NET
+
+- **Contexto:** crear un usuario no-root en el stage runtime de `api/Dockerfile` (build en Vercel Container Runtime con buildah).
+- **Error observado:** `/bin/sh: 1: addgroup: not found` → `exit status 127` y `[BUILD_FAILED]`. El stage de build pasa; falla solo el `RUN addgroup ... && adduser ...` del stage final.
+- **Causa:** `adduser`/`addgroup` son del paquete Debian **`adduser`**, que no viene en las imágenes *slim* (y no existe en Ubuntu noble ni en Mariner). Las imágenes oficiales de .NET no los usan.
+- **Solución:** **no crear usuario**. Desde .NET 8 las imágenes `runtime-deps`/`runtime`/`aspnet` ya incluyen `app` (UID/GID **1654**, `APP_UID`), creado con `groupadd`/`useradd` en el template oficial. Basta `USER app` y `COPY --chown=app:app`. Si hiciera falta crear uno, usar `groupadd`/`useradd` (paquete `passwd`/`shadow-utils`), nunca `adduser`.
+- **Aprendido en:** 2026-10-31 (primer deploy a Vercel Container: `addgroup: not found`).

@@ -1,22 +1,23 @@
 "use client";
 
 /**
- * Hook de reglas semanales de disponibilidad del tutor (GET/PUT).
- * Estados explícitos; la mutación reemplaza la lista completa (PUT).
+ * Hook de la configuración de agenda del tutor (GET/PUT me/availability):
+ * zona horaria, interruptor maestro del horario semanal, franjas y excepciones.
+ * La mutación reemplaza la configuración completa (PUT).
  */
 
 import { useEffect, useState, useCallback } from "react";
 import {
   fetchAvailability,
   replaceAvailability,
-  type AvailabilityRule,
+  type AvailabilitySettings,
 } from "@/lib/api";
 
 export type AvailabilityState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; error: string }
-  | { status: "success"; data: AvailabilityRule[] };
+  | { status: "success"; data: AvailabilitySettings };
 
 export function useAvailability(token: string | null) {
   const [state, setState] = useState<AvailabilityState>(() =>
@@ -26,12 +27,11 @@ export function useAvailability(token: string | null) {
   useEffect(() => {
     if (!token) return;
 
-    const controller = new AbortController();
     let cancelled = false;
 
     (async () => {
       const result = await fetchAvailability(token);
-      if (cancelled || controller.signal.aborted) return;
+      if (cancelled) return;
 
       if (result.ok) {
         setState({ status: "success", data: result.data });
@@ -42,14 +42,13 @@ export function useAvailability(token: string | null) {
 
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [token]);
 
   const save = useCallback(
-    async (rules: AvailabilityRule[]) => {
+    async (settings: AvailabilitySettings) => {
       if (!token) return { ok: false as const, error: "Sesión requerida" };
-      return replaceAvailability(token, rules);
+      return replaceAvailability(token, settings);
     },
     [token]
   );

@@ -129,6 +129,7 @@ export default function AdminTutoresPage() {
                     <ApplicationCard
                       key={app.id}
                       application={app}
+                      token={token}
                       deciding={deciding === app.id}
                       onApprove={() => void handleApprove(app)}
                       onReject={() => setRejectTarget(app)}

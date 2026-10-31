@@ -1,3 +1,4 @@
+using AuraLearn.Application.Dto;
 using AuraLearn.Application.Interfaces;
 using AuraLearn.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -17,5 +18,39 @@ public class UserRepository(AuraLearnDbContext db) : IUserRepository
     {
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateAsync(User user, CancellationToken ct)
+    {
+        db.Users.Update(user);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<PagedResult<AdminUserDto>> SearchAsync(
+        AdminUserSearchCriteria criteria, CancellationToken ct)
+    {
+        var query = db.Users.AsNoTracking().AsQueryable();
+
+        if (criteria.Role is not null)
+            query = query.Where(u => u.Role == criteria.Role);
+
+        if (!string.IsNullOrWhiteSpace(criteria.Query))
+        {
+            var term = criteria.Query.Trim().ToLower();
+            query = query.Where(u =>
+                u.Email.ToLower().Contains(term) ||
+                u.FullName.ToLower().Contains(term));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((criteria.Page - 1) * criteria.PageSize)
+            .Take(criteria.PageSize)
+            .Select(u => new AdminUserDto(u.Id, u.Email, u.FullName, u.Role, u.CreatedAt))
+            .ToListAsync(ct);
+
+        return new PagedResult<AdminUserDto>(items, criteria.Page, criteria.PageSize, totalCount);
     }
 }

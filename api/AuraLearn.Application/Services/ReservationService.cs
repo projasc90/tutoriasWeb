@@ -8,6 +8,8 @@ namespace AuraLearn.Application.Services;
 /// <summary>
 /// Servicio de reservas: crear, acreditar comprobante, cancelar, consultar.
 /// Reglas de negocio centralizadas aquí (incluida la máquina de estados).
+/// Las reglas configurables por el Admin (anticipación de cancelación y ventana
+/// de pago SINPE) se leen de booking_rules con fallback a BookingRulesDefaults.
 /// TDD: cada invariante = test primero (ver ReservationServiceTests).
 /// </summary>
 public class ReservationService(
@@ -15,10 +17,9 @@ public class ReservationService(
     ISlotRepository slots,
     IWalletRepository wallet,
     SinpeConfig sinpe,
-    SinpeComprobanteValidator comprobanteValidator)
+    SinpeComprobanteValidator comprobanteValidator,
+    IBookingRulesRepository bookingRules)
 {
-    /// <summary>Ventana de pago en minutos (60 min, decisión alineada con el usuario).</summary>
-    private static readonly TimeSpan PaymentWindow = TimeSpan.FromMinutes(60);
 
     /// <summary>
     /// Crea una reserva idempotente. Reintentos del cliente con la misma idempotencyKey
@@ -32,6 +33,11 @@ public class ReservationService(
         var existing = await reservations.GetByIdempotencyKeyAsync(request.IdempotencyKey, ct);
         if (existing is not null)
             return ReservationResult<ReservationDto>.Found(ToDto(existing, "", DateTime.MinValue, DateTime.MinValue));
+
+        // Ventana de pago SINPE definida por el Admin (default 60 min)
+        var paymentWindow = TimeSpan.FromMinutes(
+            (await bookingRules.GetAsync(ct))?.PaymentWindowMinutes
+                ?? BookingRulesDefaults.PaymentWindowMinutes);
 
         // 2. El slot debe existir (incluye el Tutor para el precio)
         var slot = await slots.GetByIdAsync(request.SlotId, ct);
@@ -63,7 +69,7 @@ public class ReservationService(
             Status = ReservationStatus.PendingPayment,
             PriceCrc = slot.Tutor.PriceCrc,
             IdempotencyKey = request.IdempotencyKey,
-            ExpiresAt = DateTime.UtcNow.Add(PaymentWindow),
+            ExpiresAt = DateTime.UtcNow.Add(paymentWindow),
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -185,8 +191,9 @@ public class ReservationService(
     }
 
     /// <summary>
-    /// El estudiante cancela su reserva. Si faltan ≥12 h para la sesión,
-    /// se acredita el monto al monedero. Si faltan menos, se pierde el pago.
+    /// El estudiante cancela su reserva. Si falta al menos la anticipación mínima
+    /// definida por el Admin (default 12 h) para la sesión, se acredita el monto
+    /// al monedero. Si falta menos, se pierde el pago.
     /// </summary>
     public async Task<ReservationResult<ReservationDto>> CancelAsync(
         Guid reservationId, Guid studentId, CancellationToken ct)
@@ -203,12 +210,16 @@ public class ReservationService(
 
         var slot = await slots.GetByIdAsync(reservation.SlotId, ct);
 
-        // Determinar si hay reembolso: solo si el pago fue confirmado y faltan ≥12 h.
-        // Una reserva en PendingPayment nunca pagó: cancelarla no genera crédito.
+        // Determinar si hay reembolso: solo si el pago fue confirmado y falta al
+        // menos la anticipación definida por el Admin (default 12 h). Una reserva
+        // en PendingPayment nunca pagó: cancelarla no genera crédito.
+        var notice = TimeSpan.FromHours(
+            (await bookingRules.GetAsync(ct))?.CancellationNoticeHours
+                ?? BookingRulesDefaults.CancellationNoticeHours);
         var hoursUntilSlot = (slot?.StartAt ?? DateTime.UtcNow) - DateTime.UtcNow;
         var hasReimbursement =
             reservation.Status == ReservationStatus.Confirmed &&
-            hoursUntilSlot >= TimeSpan.FromHours(12);
+            hoursUntilSlot >= notice;
 
         reservation.Status = ReservationStatus.Cancelled;
         reservation.CancelledAt = DateTime.UtcNow;

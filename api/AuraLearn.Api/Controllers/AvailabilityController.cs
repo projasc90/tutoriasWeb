@@ -18,23 +18,23 @@ public class AvailabilityController(AvailabilityService service) : ControllerBas
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
                    ?? User.FindFirstValue("sub")!);
 
-    /// <summary>Reglas actuales del tutor autenticado.</summary>
+    /// <summary>Configuración completa de la agenda del tutor autenticado.</summary>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<AvailabilityRuleDto>>> Get(CancellationToken ct)
+    public async Task<ActionResult<AvailabilitySettingsDto>> Get(CancellationToken ct)
     {
-        var rules = await service.GetForCurrentUserAsync(GetUserId(), ct);
-        if (rules is null)
+        var settings = await service.GetForCurrentUserAsync(GetUserId(), ct);
+        if (settings is null)
             return Forbid();
 
-        return Ok(rules.Select(r => new AvailabilityRuleDto(r.Weekday, r.StartLocal, r.EndLocal)).ToList());
+        return Ok(settings);
     }
 
-    /// <summary>Reemplazo completo de las reglas del tutor autenticado.</summary>
+    /// <summary>Reemplazo completo de la configuración de agenda (zona, toggle, franjas, excepciones).</summary>
     [HttpPut]
     public async Task<ActionResult> Replace(
-        [FromBody] ReplaceAvailabilityRequest request, CancellationToken ct)
+        [FromBody] ReplaceAvailabilitySettingsRequest request, CancellationToken ct)
     {
-        var result = await service.ReplaceForCurrentUserAsync(GetUserId(), request.Rules, ct);
+        var result = await service.ReplaceForCurrentUserAsync(GetUserId(), request, ct);
 
         if (result.IsForbidden) return Forbid();
         if (result.IsInvalid)

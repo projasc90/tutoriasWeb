@@ -20,6 +20,9 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<WalletEntry> WalletEntries => Set<WalletEntry>();
     public DbSet<TutorAvailability> TutorAvailability => Set<TutorAvailability>();
+    public DbSet<TutorAvailabilityException> TutorAvailabilityExceptions => Set<TutorAvailabilityException>();
+    public DbSet<TutorDocument> TutorDocuments => Set<TutorDocument>();
+    public DbSet<BookingRules> BookingRules => Set<BookingRules>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +51,7 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
             entity.Property(t => t.UserId).HasColumnName("user_id");
             entity.Property(t => t.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
             entity.Property(t => t.Credentials).HasColumnName("credentials").HasMaxLength(200).IsRequired();
+            entity.Property(t => t.Specialization).HasColumnName("specialization").HasMaxLength(100);
             entity.Property(t => t.University).HasColumnName("university").HasMaxLength(100).IsRequired();
             entity.Property(t => t.Rating).HasColumnName("rating").HasPrecision(3, 2);
             entity.Property(t => t.Reviews).HasColumnName("reviews");
@@ -58,6 +62,8 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
             entity.Property(t => t.Featured).HasColumnName("featured");
             entity.Property(t => t.VerificationStatus).HasColumnName("verification_status");
             entity.Property(t => t.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(500);
+            entity.Property(t => t.PhotoPath).HasColumnName("photo_path").HasMaxLength(500);
+            entity.Property(t => t.TimeZoneId).HasColumnName("timezone_id").HasMaxLength(64).IsRequired();
             entity.Property(t => t.CreatedAt).HasColumnName("created_at");
 
             // Vínculo con el usuario postulante (1 tutor por usuario; nullable para el seed demo)
@@ -199,6 +205,9 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
             entity.Property(a => a.Weekday).HasColumnName("weekday");
             entity.Property(a => a.StartLocal).HasColumnName("start_local").HasColumnType("time without time zone");
             entity.Property(a => a.EndLocal).HasColumnName("end_local").HasColumnType("time without time zone");
+            entity.Property(a => a.IsRecurring).HasColumnName("is_recurring").HasDefaultValue(true);
+            entity.Property(a => a.AnchorDate).HasColumnName("anchor_date");
+            entity.Property(a => a.WeeklyEnabled).HasColumnName("weekly_enabled").HasDefaultValue(true);
 
             // Invariante: la misma franja no se duplica para el mismo tutor y día
             entity.HasIndex(a => new { a.TutorId, a.Weekday, a.StartLocal })
@@ -210,6 +219,92 @@ public class AuraLearnDbContext(DbContextOptions<AuraLearnDbContext> options) : 
                 .HasForeignKey(a => a.TutorId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_tutor_availability_tutors_tutor_id");
+        });
+
+        modelBuilder.Entity<TutorAvailabilityException>(entity =>
+        {
+            entity.ToTable("tutor_availability_exceptions");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.TutorId).HasColumnName("tutor_id");
+            entity.Property(e => e.Date).HasColumnName("date");
+            entity.Property(e => e.Reason).HasColumnName("reason").HasMaxLength(200);
+
+            entity.HasOne(e => e.Tutor)
+                .WithMany()
+                .HasForeignKey(e => e.TutorId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_tutor_availability_exceptions_tutors_tutor_id");
+
+            // Invariante: la misma fecha no se duplica para el mismo tutor
+            entity.HasIndex(e => new { e.TutorId, e.Date })
+                .IsUnique()
+                .HasDatabaseName("ux_tutor_availability_exceptions_tutor_date");
+        });
+
+        modelBuilder.Entity<TutorDocument>(entity =>
+        {
+            entity.ToTable("tutor_documents");
+            entity.HasKey(d => d.Id);
+
+            entity.Property(d => d.Id).HasColumnName("id");
+            entity.Property(d => d.TutorId).HasColumnName("tutor_id");
+            entity.Property(d => d.Kind).HasColumnName("kind");
+            entity.Property(d => d.FileName).HasColumnName("file_name").HasMaxLength(255).IsRequired();
+            entity.Property(d => d.ContentType).HasColumnName("content_type").HasMaxLength(100).IsRequired();
+            entity.Property(d => d.SizeBytes).HasColumnName("size_bytes");
+            entity.Property(d => d.StoragePath).HasColumnName("storage_path").HasMaxLength(500).IsRequired();
+            entity.Property(d => d.UploadedAt).HasColumnName("uploaded_at");
+
+            // El documento pertenece a la postulación; se elimina con ella (cascade)
+            entity.HasOne<Tutor>()
+                .WithMany()
+                .HasForeignKey(d => d.TutorId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_tutor_documents_tutors_tutor_id");
+
+            // Índice de consulta por tutor (listado del tutor y cola del admin)
+            entity.HasIndex(d => d.TutorId).HasDatabaseName("ix_tutor_documents_tutor_id");
+
+            // Invariante: Identificacion (3) es única por tutor (upsert en el
+            // servicio); Titulo (1) y Certificacion (2) acumulan (máx 5 c/u).
+            entity.HasIndex(d => new { d.TutorId, d.Kind })
+                .IsUnique()
+                .HasDatabaseName("ux_tutor_documents_tutor_kind")
+                .HasFilter("kind = 3");
+        });
+
+        modelBuilder.Entity<BookingRules>(entity =>
+        {
+            // Fila única de configuración de plataforma (definida por el Admin)
+            entity.ToTable("booking_rules");
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.Id).HasColumnName("id");
+            entity.Property(r => r.CancellationNoticeHours).HasColumnName("cancellation_notice_hours");
+            entity.Property(r => r.PaymentWindowMinutes).HasColumnName("payment_window_minutes");
+            entity.Property(r => r.SlotDurationMinutes).HasColumnName("slot_duration_minutes");
+            entity.Property(r => r.BookingHorizonDays).HasColumnName("booking_horizon_days");
+            entity.Property(r => r.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(r => r.UpdatedByUserId).HasColumnName("updated_by_user_id");
+
+            // Sin FK a users: auditoría informativa (el admin puede eliminarse
+            // sin romper el historial de reglas).
+
+            // Seed con los valores vigentes del código (12 h / 60 min / 60 min / 14 días)
+            // para que el Admin los vea precargados y pueda modificarlos o vaciarlos.
+            entity.HasData(new BookingRules
+            {
+                // Nombre cualificado: el DbSet "BookingRules" oculta el tipo en este scope
+                Id = AuraLearn.Domain.Entities.BookingRules.SingletonId,
+                CancellationNoticeHours = 12,
+                PaymentWindowMinutes = 60,
+                SlotDurationMinutes = 60,
+                BookingHorizonDays = 14,
+                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                UpdatedByUserId = null,
+            });
         });
     }
 }

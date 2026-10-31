@@ -96,16 +96,16 @@ export default function AdminPaymentsPage() {
             <p className="text-body-lg text-on-surface-variant">Cargando cola…</p>
           ) : state.status === "error" ? (
             <p className="text-body-lg text-error">{state.error}</p>
-          ) : state.status === "success" && state.items.length === 0 ? (
+          ) : state.status === "success" && (state.items?.length ?? 0) === 0 ? (
             <div className="rounded-xl bg-surface-container-lowest p-12 text-center shadow-sm">
               <MaterialIcon name="inbox" className="text-[40px] text-on-surface-variant" />
               <p className="mt-2 text-body-md text-on-surface-variant">
                 No hay comprobantes pendientes de revisión.
               </p>
             </div>
-          ) : (
+          ) : state.status === "success" && state.items ? (
             <div className="flex flex-col gap-4">
-              {(state as { status: "success"; items: AdminPayment[] }).items.map((p: AdminPayment) => {
+              {state.items.map((p: AdminPayment) => {
                 const isDeciding = deciding === p.reservationId;
                 return (
                   <article key={p.reservationId} className="flex flex-col gap-4 rounded-xl bg-surface-container-lowest p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -163,7 +163,7 @@ export default function AdminPaymentsPage() {
                 );
               })}
             </div>
-          )}
+          ) : null}
           {error && <p className="mt-4 text-label-md text-error">{error}</p>}
         </section>
 

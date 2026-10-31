@@ -7,6 +7,8 @@
 
 import Link from "next/link";
 import { MaterialIcon } from "@/components/material-icon";
+import { useBookingRules } from "@/hooks/use-booking-rules";
+import { BOOKING_RULES_DEFAULTS } from "@/lib/api";
 import type { Reservation } from "@/lib/api";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -28,7 +30,7 @@ export function ConfirmedView({ reservation }: { reservation: Reservation }) {
         <p className="mt-2 text-body-md text-on-surface-variant">
           Tu reserva con <strong>{reservation.tutorName}</strong> está confirmada. Te avisaremos antes de la sesión.
         </p>
-        <Link href="/mis-tutorias" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-label-md font-bold text-on-primary">
+        <Link href="/estudiante/reservas" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-label-md font-bold text-on-primary">
           Ver mis tutorías
         </Link>
       </div>
@@ -56,6 +58,13 @@ export function RejectedView({ reservation }: { reservation: Reservation }) {
 }
 
 export function ExpiredView() {
+  // Ventana de pago definida por el Admin (default 60 min)
+  const { state: reglasState } = useBookingRules();
+  const ventanaPagoMinutos =
+    reglasState.status === "success"
+      ? (reglasState.data.paymentWindowMinutes ?? BOOKING_RULES_DEFAULTS.paymentWindowMinutes)
+      : BOOKING_RULES_DEFAULTS.paymentWindowMinutes;
+
   return (
     <Shell>
       <div className="rounded-xl bg-surface-container-lowest p-8 shadow-sm">
@@ -64,7 +73,7 @@ export function ExpiredView() {
         </div>
         <h1 className="mt-4 text-headline-md font-bold text-on-surface">Reserva expirada</h1>
         <p className="mt-2 text-body-md text-on-surface-variant">
-          Pasaron los 60 minutos sin subir un comprobante válido. El slot fue liberado.
+          Pasaron los {ventanaPagoMinutos} minutos sin subir un comprobante válido. El slot fue liberado.
         </p>
         <Link href="/tutores" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-label-md font-bold text-on-primary">
           Buscar otro horario
@@ -75,6 +84,13 @@ export function ExpiredView() {
 }
 
 export function CancelledView() {
+  // Anticipación mínima de cancelación definida por el Admin (default 12 h)
+  const { state: reglasState } = useBookingRules();
+  const noticeHoras =
+    reglasState.status === "success"
+      ? (reglasState.data.cancellationNoticeHours ?? BOOKING_RULES_DEFAULTS.cancellationNoticeHours)
+      : BOOKING_RULES_DEFAULTS.cancellationNoticeHours;
+
   return (
     <Shell>
       <div className="rounded-xl bg-surface-container-lowest p-8 shadow-sm">
@@ -83,7 +99,7 @@ export function CancelledView() {
         </div>
         <h1 className="mt-4 text-headline-md font-bold text-on-surface">Reserva cancelada</h1>
         <p className="mt-2 text-body-md text-on-surface-variant">
-          Cancelaste esta reserva. Si fue con ≥12 h de anticipación, el monto volvió a tu monedero.
+          Cancelaste esta reserva. Si fue con ≥{noticeHoras} h de anticipación, el monto volvió a tu monedero.
         </p>
         <Link href="/tutores" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-label-md font-bold text-on-primary">
           Buscar otro horario

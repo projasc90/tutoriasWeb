@@ -23,6 +23,53 @@ namespace AuraLearn.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AuraLearn.Domain.Entities.BookingRules", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("BookingHorizonDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("booking_horizon_days");
+
+                    b.Property<int?>("CancellationNoticeHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancellation_notice_hours");
+
+                    b.Property<int?>("PaymentWindowMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_window_minutes");
+
+                    b.Property<int?>("SlotDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("slot_duration_minutes");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("booking_rules", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            BookingHorizonDays = 14,
+                            CancellationNoticeHours = 12,
+                            PaymentWindowMinutes = 60,
+                            SlotDurationMinutes = 60,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("AuraLearn.Domain.Entities.Reservation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -173,6 +220,11 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("photo_path");
+
                     b.Property<int>("PriceCrc")
                         .HasColumnType("integer")
                         .HasColumnName("price_crc");
@@ -195,10 +247,21 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("reviews");
 
+                    b.Property<string>("Specialization")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("specialization");
+
                     b.PrimitiveCollection<List<string>>("Subjects")
                         .IsRequired()
                         .HasColumnType("text[]")
                         .HasColumnName("subjects");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("timezone_id");
 
                     b.Property<string>("University")
                         .IsRequired()
@@ -242,6 +305,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.98m,
                             Reviews = 184,
                             Subjects = new List<string> { "Cálculo I", "Cálculo II", "Álgebra Lineal", "EDOs" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UCR",
                             VerificationStatus = 3
                         },
@@ -258,6 +322,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 5.00m,
                             Reviews = 92,
                             Subjects = new List<string> { "Python", "Algoritmos", "Estructuras de Datos", "IA" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "TEC",
                             VerificationStatus = 3
                         },
@@ -274,6 +339,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.90m,
                             Reviews = 115,
                             Subjects = new List<string> { "Física I", "Física II", "Termodinámica", "Mecánica" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UCR",
                             VerificationStatus = 3
                         },
@@ -290,6 +356,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.95m,
                             Reviews = 140,
                             Subjects = new List<string> { "Química Orgánica", "Bioquímica", "Farmacología" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UNA",
                             VerificationStatus = 3
                         },
@@ -306,6 +373,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.85m,
                             Reviews = 78,
                             Subjects = new List<string> { "Econometría", "Microeconomía", "Macroeconomía", "Finanzas" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "TEC",
                             VerificationStatus = 3
                         },
@@ -322,6 +390,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.92m,
                             Reviews = 103,
                             Subjects = new List<string> { "Biología Celular", "Genética", "Microbiología" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UCR",
                             VerificationStatus = 3
                         },
@@ -338,6 +407,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.78m,
                             Reviews = 56,
                             Subjects = new List<string> { "Circuitos", "Electrónica", "Señales", "Control" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "TEC",
                             VerificationStatus = 3
                         },
@@ -354,6 +424,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.88m,
                             Reviews = 67,
                             Subjects = new List<string> { "Estadística", "Probabilidad", "R", "Análisis de Datos" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UCR",
                             VerificationStatus = 3
                         },
@@ -370,6 +441,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.97m,
                             Reviews = 201,
                             Subjects = new List<string> { "Cálculo III", "Variable Compleja", "Topología" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UNA",
                             VerificationStatus = 3
                         },
@@ -386,6 +458,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.93m,
                             Reviews = 88,
                             Subjects = new List<string> { "Inglés Académico", "TOEFL", "Redacción", "Español" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "UCR",
                             VerificationStatus = 3
                         },
@@ -402,6 +475,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.81m,
                             Reviews = 44,
                             Subjects = new List<string> { "Física Médica", "Radiología", "Protección Radiológica" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "TEC",
                             VerificationStatus = 3
                         },
@@ -418,6 +492,7 @@ namespace AuraLearn.Infrastructure.Migrations
                             Rating = 4.76m,
                             Reviews = 39,
                             Subjects = new List<string> { "Estática", "Resistencia", "Hormigón", "Diseño Estructural" },
+                            TimeZoneId = "America/Costa_Rica",
                             University = "TEC",
                             VerificationStatus = 3
                         });
@@ -430,9 +505,19 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateOnly?>("AnchorDate")
+                        .HasColumnType("date")
+                        .HasColumnName("anchor_date");
+
                     b.Property<TimeOnly>("EndLocal")
                         .HasColumnType("time without time zone")
                         .HasColumnName("end_local");
+
+                    b.Property<bool>("IsRecurring")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_recurring");
 
                     b.Property<TimeOnly>("StartLocal")
                         .HasColumnType("time without time zone")
@@ -446,6 +531,12 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("weekday");
 
+                    b.Property<bool>("WeeklyEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("weekly_enabled");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TutorId", "Weekday", "StartLocal")
@@ -453,6 +544,89 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasDatabaseName("ux_tutor_availability_tutor_weekday_start");
 
                     b.ToTable("tutor_availability", (string)null);
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorAvailabilityException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tutor_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("ux_tutor_availability_exceptions_tutor_date");
+
+                    b.ToTable("tutor_availability_exceptions", (string)null);
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("storage_path");
+
+                    b.Property<Guid>("TutorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tutor_id");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorId")
+                        .HasDatabaseName("ix_tutor_documents_tutor_id");
+
+                    b.HasIndex("TutorId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ux_tutor_documents_tutor_kind")
+                        .HasFilter("kind = 3");
+
+                    b.ToTable("tutor_documents", (string)null);
                 });
 
             modelBuilder.Entity("AuraLearn.Domain.Entities.User", b =>
@@ -586,6 +760,28 @@ namespace AuraLearn.Infrastructure.Migrations
                         .HasConstraintName("fk_tutor_availability_tutors_tutor_id");
 
                     b.Navigation("Tutor");
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorAvailabilityException", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Tutor", "Tutor")
+                        .WithMany()
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tutor_availability_exceptions_tutors_tutor_id");
+
+                    b.Navigation("Tutor");
+                });
+
+            modelBuilder.Entity("AuraLearn.Domain.Entities.TutorDocument", b =>
+                {
+                    b.HasOne("AuraLearn.Domain.Entities.Tutor", null)
+                        .WithMany()
+                        .HasForeignKey("TutorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tutor_documents_tutors_tutor_id");
                 });
 
             modelBuilder.Entity("AuraLearn.Domain.Entities.WalletEntry", b =>

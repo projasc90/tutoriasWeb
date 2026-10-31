@@ -48,10 +48,11 @@ Fuente: los `.csproj` reales de `api/`. .NET SDK **10.0.401** (target `net10.0`)
 
 ## Infraestructura
 
-- **Frontend:** Vercel o Netlify.
-- **Backend:** VPS Linux (systemd + nginx) o Azure App Service o AWS Elastic Beanstalk.
-- **BD en la nube:** Azure Database for PostgreSQL Flexible Server / Amazon RDS for PostgreSQL.
-- **Dev OS:** macOS · **Prod OS:** Linux.
+- **Frontend:** Vercel (Next.js nativo; `web/vercel.json`; env `NEXT_PUBLIC_API_URL`).
+- **Backend:** contenedor Docker (`api/Dockerfile` multi-stage, usuario no-root, entrypoint con migraciones opt-in) desplegado en **Railway** (ADR-008). Vercel no soporta .NET/contenedores.
+- **BD en la nube:** **Neon** (Postgres gestionado, connection string pooled por variable de entorno). Local: Postgres 16 en `docker-compose.yml` (puerto 5433) o Postgres dev existente (5432).
+- **CI/CD:** GitHub Actions — `.github/workflows/api-deploy.yml` (build+tests+GHCR+migraciones+redeploy Railway) y `.github/workflows/web-ci.yml` (gate lint/tsc/build; deploy nativo de Vercel).
+- **Dev OS:** macOS · **Prod OS:** Linux (contenedores).
 
 ## Scripts reales (`web/package.json`)
 

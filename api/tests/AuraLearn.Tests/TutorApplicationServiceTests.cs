@@ -19,10 +19,11 @@ public class TutorApplicationServiceTests
 {
     private readonly ITutorRepository _tutors = Substitute.For<ITutorRepository>();
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
+    private readonly ITutorDocumentRepository _documents = Substitute.For<ITutorDocumentRepository>();
     private readonly SubmitTutorApplicationValidator _validator = new();
 
     private TutorApplicationService CreateService() =>
-        new(_tutors, _users, _validator);
+        new(_tutors, _users, _validator, _documents);
 
     private static User CreateUser() => new()
     {
@@ -37,6 +38,7 @@ public class TutorApplicationServiceTests
     private static SubmitTutorApplicationRequest CreateValidRequest() => new(
         FullName: "Dra. Ana Mora",
         Credentials: "PhD Matemáticas",
+        Specialization: null,
         University: "UCR",
         Bio: "10 años de experiencia en tutoría universitaria.",
         Subjects: ["Cálculo I", "Álgebra Lineal"],
@@ -139,6 +141,24 @@ public class TutorApplicationServiceTests
     }
 
     [Fact]
+    public async Task Submit_NormalizesSubjectCasing()
+    {
+        var user = CreateUser();
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _tutors.GetByUserIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns((Tutor?)null);
+
+        var service = CreateService();
+        var request = CreateValidRequest() with { Subjects = ["cálculo i", "estadística y probabilidad"] };
+        var result = await service.SubmitAsync(user.Id, request, CancellationToken.None);
+
+        Assert.True(result.IsCreated);
+        await _tutors.Received(1).AddAsync(
+            Arg.Is<Tutor>(t =>
+                t.Subjects.SequenceEqual(new[] { "Cálculo I", "Estadística y Probabilidad" })),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Submit_WithUnknownUser_ReturnsUnauthorized()
     {
         _users.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
@@ -234,6 +254,7 @@ public class TutorApplicationServiceTests
             CreatedAt = DateTime.UtcNow,
         };
         _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+        MockDocumentsPresent(tutor.Id);
 
         var service = CreateService();
         var result = await service.DecideAsync(tutor.Id, "approve", null, CancellationToken.None);
@@ -310,5 +331,215 @@ public class TutorApplicationServiceTests
         var result = await service.DecideAsync(Guid.NewGuid(), "maybe", null, CancellationToken.None);
 
         Assert.True(result.IsInvalid);
+    }
+
+    // ── Promoción de rol al aprobar (Fase 0) ──────────────────────
+
+    [Fact]
+    public async Task Decide_ApprovePendingApplication_PromotesUserToTutorRole()
+    {
+        var user = CreateUser(); // Role.Estudiante
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Name = user.FullName,
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        MockDocumentsPresent(tutor.Id);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(tutor.Id, "approve", null, CancellationToken.None);
+
+        Assert.True(result.IsDecided);
+        Assert.Equal(Role.Tutor, user.Role);
+        await _users.Received(1).UpdateAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Role == Role.Tutor),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Decide_RejectPendingApplication_DoesNotChangeUserRole()
+    {
+        var user = CreateUser();
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Name = user.FullName,
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(
+            tutor.Id, "reject", "Título no verificable en el registro universitario", CancellationToken.None);
+
+        Assert.True(result.IsDecided);
+        Assert.Equal(Role.Estudiante, user.Role);
+        await _users.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Decide_ApproveWithoutUserId_DoesNotTouchUsers()
+    {
+        // Tutores seed demo sin UserId: la aprobación no debe fallar ni tocar users.
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = null,
+            Name = "Tutor Seed",
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(tutor.Id, "approve", null, CancellationToken.None);
+
+        Assert.True(result.IsDecided);
+        await _users.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _users.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
+        await _documents.DidNotReceive().ListByTutorAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    // ── Gate de documentos al aprobar (Fase B) ────────────────────
+
+    [Fact]
+    public async Task Decide_ApproveWithoutDocuments_ReturnsConflictAndDoesNotDecide()
+    {
+        var user = CreateUser();
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Name = user.FullName,
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _documents.ListByTutorAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns([]);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(tutor.Id, "approve", null, CancellationToken.None);
+
+        Assert.True(result.IsConflict);
+        Assert.False(result.IsDecided);
+        Assert.Equal(TutorApplicationErrors.MissingDocuments, result.ErrorCode);
+        Assert.Contains("Título académico", result.ErrorDetail);
+        Assert.Contains("Certificaciones", result.ErrorDetail);
+        Assert.Contains("Identificación", result.ErrorDetail);
+        Assert.Equal(VerificationStatus.PendingReview, tutor.VerificationStatus);
+        await _tutors.DidNotReceive().UpdateAsync(Arg.Any<Tutor>(), Arg.Any<CancellationToken>());
+        Assert.Equal(Role.Estudiante, user.Role);
+        await _users.DidNotReceive().UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Decide_ApproveWithPartialDocuments_ListsOnlyMissingKinds()
+    {
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "Tutor A",
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+        var titulo = new TutorDocument
+        {
+            Id = Guid.NewGuid(),
+            TutorId = tutor.Id,
+            Kind = TutorDocumentKind.Titulo,
+            FileName = "titulo.pdf",
+            ContentType = "application/pdf",
+            SizeBytes = 1024,
+            StoragePath = "p.pdf",
+            UploadedAt = DateTime.UtcNow,
+        };
+        _documents.ListByTutorAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns([titulo]);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(tutor.Id, "approve", null, CancellationToken.None);
+
+        Assert.True(result.IsConflict);
+        Assert.DoesNotContain("Título académico", result.ErrorDetail);
+        Assert.Contains("Certificaciones", result.ErrorDetail);
+        Assert.Contains("Identificación", result.ErrorDetail);
+    }
+
+    [Fact]
+    public async Task Decide_Reject_DoesNotRequireDocuments()
+    {
+        var tutor = new Tutor
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "Tutor A",
+            Credentials = "Lic. X",
+            University = "UCR",
+            Bio = "bio",
+            VerificationStatus = VerificationStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _tutors.GetByIdAsync(tutor.Id, Arg.Any<CancellationToken>()).Returns(tutor);
+
+        var service = CreateService();
+        var result = await service.DecideAsync(
+            tutor.Id, "reject", "Título no verificable en el registro universitario", CancellationToken.None);
+
+        Assert.True(result.IsDecided);
+        await _documents.DidNotReceive().ListByTutorAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>Mockea los 3 tipos de documento presentes para el tutor dado.</summary>
+    private void MockDocumentsPresent(Guid tutorId)
+    {
+        var docs = new List<TutorDocument>
+        {
+            new() { Id = Guid.NewGuid(), TutorId = tutorId, Kind = TutorDocumentKind.Titulo, FileName = "t.pdf", ContentType = "application/pdf", SizeBytes = 1, StoragePath = "t.pdf", UploadedAt = DateTime.UtcNow },
+            new() { Id = Guid.NewGuid(), TutorId = tutorId, Kind = TutorDocumentKind.Certificacion, FileName = "c.pdf", ContentType = "application/pdf", SizeBytes = 1, StoragePath = "c.pdf", UploadedAt = DateTime.UtcNow },
+            new() { Id = Guid.NewGuid(), TutorId = tutorId, Kind = TutorDocumentKind.Identificacion, FileName = "i.pdf", ContentType = "application/pdf", SizeBytes = 1, StoragePath = "i.pdf", UploadedAt = DateTime.UtcNow },
+        };
+        _documents.ListByTutorAsync(tutorId, Arg.Any<CancellationToken>()).Returns(docs);
+    }
+
+    [Fact]
+    public async Task Submit_WithSpecialization_PersistsItOnNewTutor()
+    {
+        var user = CreateUser();
+        _users.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _tutors.GetByUserIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns((Tutor?)null);
+
+        var service = CreateService();
+        var request = CreateValidRequest() with { Specialization = "Matemática Aplicada" };
+        var result = await service.SubmitAsync(user.Id, request, CancellationToken.None);
+
+        Assert.True(result.IsCreated);
+        await _tutors.Received(1).AddAsync(
+            Arg.Is<Tutor>(t => t.Specialization == "Matemática Aplicada"),
+            Arg.Any<CancellationToken>());
     }
 }

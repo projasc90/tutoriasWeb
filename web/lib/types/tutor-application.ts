@@ -8,6 +8,8 @@
 export type TutorApplicationPayload = {
   fullName: string;
   credentials: string;
+  /** Especialización o énfasis del título (opcional). */
+  specialization: string | null;
   university: string;
   bio: string;
   subjects: string[];
@@ -33,4 +35,21 @@ export type AuthSession = {
   fullName: string;
   role: string;
   token: string;
+};
+
+/**
+ * Tipos de documento de verificación (espejo de TutorDocumentKind.cs).
+ * Titulo e Identificacion son únicos por tutor (upsert); Certificacion
+ * acumula hasta 5.
+ */
+export type TutorDocumentKindName = "Titulo" | "Certificacion" | "Identificacion";
+
+/** Metadatos de un documento de verificación (espejo de TutorDocumentItemDto). */
+export type TutorDocumentItem = {
+  id: string;
+  kind: TutorDocumentKindName;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
 };

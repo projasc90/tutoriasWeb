@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MaterialIcon } from "@/components/material-icon";
 import { SiteHeader } from "@/components/landing/currency-toggle";
 import { useTutors } from "@/hooks/use-tutors";
+import { tutorPhotoUrl } from "@/lib/api";
 import { AVAILABILITIES, DEFAULT_FILTERS, LEVELS, RATINGS, UNIVERSITIES } from "@/lib/data/tutors";
 import { applySort } from "@/lib/filters";
 import { formatSlotEsCr } from "@/lib/time";
@@ -276,9 +277,18 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
       <div className="flex flex-1 flex-col gap-4 p-5">
         {/* Header */}
         <div className="flex items-start gap-3.5">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container font-bold text-lg text-on-primary">
-            {initials}
-          </div>
+          {tutor.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tutorPhotoUrl(tutor.id)}
+              alt={`Foto de ${tutor.name}`}
+              className="h-14 w-14 shrink-0 rounded-xl object-cover"
+            />
+          ) : (
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container font-bold text-lg text-on-primary">
+              {initials}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-1">
               <h3 className="truncate text-title-md font-bold text-on-surface">

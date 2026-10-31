@@ -9,6 +9,7 @@ public record TutorDto(
     Guid Id,
     string Name,
     string Credentials,
+    string? Specialization,
     string University,
     decimal Rating,
     int Reviews,
@@ -17,7 +18,8 @@ public record TutorDto(
     int PriceUsd,
     string Bio,
     bool Featured,
-    DateTime? NextSlotAt);
+    DateTime? NextSlotAt,
+    string? PhotoUrl = null);
 
 /// <summary>Resultado paginado genérico.</summary>
 public record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

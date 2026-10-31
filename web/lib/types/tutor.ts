@@ -10,6 +10,8 @@ export type Tutor = {
   id: string;
   name: string;
   credentials: string;
+  /** Especialización o énfasis del título (opcional). */
+  specialization: string | null;
   university: string;
   rating: number;
   reviews: number;
@@ -20,6 +22,8 @@ export type Tutor = {
   nextSlotAt: string | null;
   featured: boolean;
   bio: string;
+  /** URL pública relativa de la foto de perfil (null = sin foto, mostrar iniciales). */
+  photoUrl: string | null;
 };
 
 export type FilterState = {

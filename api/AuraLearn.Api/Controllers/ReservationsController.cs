@@ -62,8 +62,9 @@ public class ReservationsController : ControllerBase
         return Ok(result.Value);
     }
 
-    /// <summary>Crea una reserva idempotente (idempotencyKey en el body).</summary>
+    /// <summary>Crea una reserva idempotente (idempotencyKey en el body). Solo Estudiante.</summary>
     [HttpPost]
+    [Authorize(Roles = "Estudiante")]
     public async Task<ActionResult<ReservationDto>> Create(
         [FromBody] CreateReservationRequest request,
         CancellationToken ct)
@@ -81,8 +82,9 @@ public class ReservationsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value);
     }
 
-    /// <summary>Estudiante sube el comprobante SINPE (queda en cola del Admin).</summary>
+    /// <summary>Estudiante sube el comprobante SINPE (queda en cola del Admin). Solo Estudiante.</summary>
     [HttpPost("{id:guid}/comprobante")]
+    [Authorize(Roles = "Estudiante")]
     public async Task<ActionResult<ReservationDto>> SubmitComprobante(
         Guid id,
         [FromBody] SubmitComprobanteRequest request,
@@ -103,8 +105,9 @@ public class ReservationsController : ControllerBase
         return Accepted(result.Value);
     }
 
-    /// <summary>Estudiante cancela su reserva.</summary>
+    /// <summary>Estudiante cancela su reserva. Solo Estudiante.</summary>
     [HttpPatch("{id:guid}/cancel")]
+    [Authorize(Roles = "Estudiante")]
     public async Task<ActionResult<ReservationDto>> Cancel(Guid id, CancellationToken ct)
     {
         var studentId = GetUserId();

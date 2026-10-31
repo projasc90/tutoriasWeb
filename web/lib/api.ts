@@ -9,7 +9,13 @@ import type {
   TutorApplicationPayload,
   TutorApplicationResponse,
   TutorApplicationStatus,
+  TutorDocumentItem,
+  TutorDocumentKindName,
 } from "@/lib/types/tutor-application";
+import type {
+  TutorProfile,
+  UpdateTutorProfilePayload,
+} from "@/lib/types/tutor-profile";
 
 // ── Contratos (espejo de los DTOs del backend) ─────────────────────
 
@@ -17,6 +23,8 @@ export type Tutor = {
   id: string;
   name: string;
   credentials: string;
+  /** Especialización o énfasis del título (opcional). */
+  specialization: string | null;
   university: string;
   rating: number;
   reviews: number;
@@ -27,6 +35,8 @@ export type Tutor = {
   featured: boolean;
   /** Próximo cupo disponible en UTC (ISO 8601). Formateo a zona CR en presentación. */
   nextSlotAt: string | null;
+  /** URL pública relativa de la foto de perfil (null = sin foto, mostrar iniciales). */
+  photoUrl: string | null;
 };
 
 // ── Contratos de slots/reservas/pagos (espejo de ReservationDto.cs) ─
@@ -332,6 +342,7 @@ export type AdminTutorApplication = {
   userId: string;
   name: string;
   credentials: string;
+  specialization: string | null;
   university: string;
   bio: string;
   subjects: string[];
@@ -339,9 +350,60 @@ export type AdminTutorApplication = {
   priceUsd: number;
   status: string;
   submittedAt: string;
+  documents: TutorDocumentItem[];
 };
 
 export type VerifyDecision = "approve" | "reject";
+
+/** Usuario visto desde el panel de administración (sin datos sensibles). */
+export type AdminUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: "Estudiante" | "Tutor" | "Admin";
+  createdAt: string;
+};
+
+export type AdminUsersSearchParams = {
+  query?: string;
+  role?: AdminUser["role"];
+  page?: number;
+  pageSize?: number;
+};
+
+/** GET /api/admin/users — listado paginado de usuarios (solo Admin). */
+export async function fetchAdminUsers(
+  token: string,
+  params: AdminUsersSearchParams = {},
+): Promise<ApiResult<PagedResult<AdminUser>>> {
+  try {
+    const search = new URLSearchParams();
+    if (params.query) search.set("query", params.query);
+    if (params.role) search.set("role", params.role);
+    if (params.page !== undefined) search.set("page", String(params.page));
+    if (params.pageSize !== undefined) search.set("pageSize", String(params.pageSize));
+    const qs = search.toString();
+
+    const res = await fetch(`${BASE_URL}/api/admin/users${qs ? `?${qs}` : ""}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (res.status === 403) {
+      return { ok: false, error: "No tienes permisos de administrador." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo cargar el listado de usuarios." };
+    }
+
+    const data = (await res.json()) as PagedResult<AdminUser>;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
 
 /** GET /api/admin/tutor-applications — cola pendiente de revisión (solo Admin). */
 export async function fetchAdminApplications(
@@ -401,11 +463,177 @@ export async function verifyApplication(
     if (res.status === 403) {
       return { ok: false, error: "No tienes permisos de administrador." };
     }
+    // Gate de documentos: aprobar sin los 3 tipos cargados → 409 con detalle.
+    if (res.status === 409) {
+      const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+      return {
+        ok: false,
+        error: body?.detail ?? "Faltan documentos de verificación para aprobar.",
+      };
+    }
     if (!res.ok) {
       return { ok: false, error: "No se pudo registrar la decisión." };
     }
 
     return { ok: true, data: null };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+// ── Documentos de verificación (espejo de TutorDocumentsController) ──
+
+/**
+ * POST /api/tutors/me/documents — sube un documento (multipart: kind + file).
+ * Titulo/Identificacion reemplazan el archivo previo; Certificacion acumula (máx 5).
+ */
+export async function uploadTutorDocument(
+  token: string,
+  kind: TutorDocumentKindName,
+  file: File,
+): Promise<ApiResult<TutorDocumentItem>> {
+  try {
+    const form = new FormData();
+    form.append("kind", kind);
+    form.append("file", file);
+
+    const res = await fetch(`${BASE_URL}/api/tutors/me/documents`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    if (res.status === 400) {
+      return {
+        ok: false,
+        error: "Formato o tamaño inválido: PDF/JPEG/PNG, ≤ 5 MB (certificaciones máx. 5).",
+      };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: "No tienes una postulación de tutor activa." };
+    }
+    if (res.status === 409) {
+      return {
+        ok: false,
+        error: "Tu postulación ya fue verificada; los documentos quedaron bloqueados.",
+      };
+    }
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo subir el documento. Inténtalo de nuevo." };
+    }
+
+    const data = (await res.json()) as TutorDocumentItem;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+/** GET /api/tutors/me/documents — metadatos de los documentos del tutor. */
+export async function fetchTutorDocuments(
+  token: string,
+): Promise<ApiResult<TutorDocumentItem[]>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/tutors/me/documents`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 404) {
+      return { ok: true, data: [] };
+    }
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo consultar tus documentos." };
+    }
+
+    const data = (await res.json()) as TutorDocumentItem[];
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+/**
+ * GET /api/admin/tutor-documents/{id}/file — descarga el contenido como blob
+ * URL para abrirlo en una pestaña nueva (solo Admin; el caller revoca la URL).
+ */
+export async function fetchTutorDocumentBlobUrl(
+  token: string,
+  id: string,
+): Promise<ApiResult<string>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/admin/tutor-documents/${id}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (res.status === 403) {
+      return { ok: false, error: "No tienes permisos de administrador." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo abrir el documento." };
+    }
+
+    const blob = await res.blob();
+    return { ok: true, data: URL.createObjectURL(blob) };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+// ── Foto de perfil (espejo de TutorPhotosController) ────────────
+
+/**
+ * URL absoluta de la foto pública de un tutor (GET /api/tutors/{id}/photo).
+ * El backend sirve la imagen sin autenticación; null-safe para tutores sin foto.
+ */
+export function tutorPhotoUrl(tutorId: string): string {
+  return `${BASE_URL}/api/tutors/${tutorId}/photo`;
+}
+
+/**
+ * POST /api/tutors/me/photo — sube o reemplaza la foto de perfil del tutor
+ * autenticado (multipart: file). Devuelve la URL pública relativa.
+ */
+export async function uploadTutorPhoto(
+  token: string,
+  file: File,
+): Promise<ApiResult<{ photoUrl: string }>> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch(`${BASE_URL}/api/tutors/me/photo`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    if (res.status === 400) {
+      return {
+        ok: false,
+        error: "Imagen inválida: usa JPEG, PNG o WebP de hasta 5 MB.",
+      };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: "No tienes un perfil de tutor activo." };
+    }
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo subir la foto. Inténtalo de nuevo." };
+    }
+
+    const data = (await res.json()) as { photoUrl: string };
+    return { ok: true, data };
   } catch {
     return { ok: false, error: "No se pudo conectar con el servidor" };
   }
@@ -660,16 +888,51 @@ export async function decidePayment(
 export type AvailabilityRule = {
   /** 0=domingo … 6=sábado (igual que Date.getDay). */
   weekday: number;
-  /** "HH:mm" hora local CR (incluida). */
+  /** "HH:mm" hora local (zona del tutor; incluida). */
   startLocal: string;
-  /** "HH:mm" hora local CR (excluida). */
+  /** "HH:mm" hora local (zona del tutor; excluida). */
   endLocal: string;
+  /** true = se repite todas las semanas; false = aplica una sola vez (fecha ancla). */
+  isRecurring: boolean;
+  /** Fecha local (YYYY-MM-DD) en la que aplica una franja no recurrente. */
+  anchorDate: string | null;
 };
 
-/** GET /api/tutors/me/availability — reglas del tutor autenticado. */
+/** Día de excepción (feriado/vacaciones): no se generan cupos esa fecha. */
+export type AvailabilityException = {
+  /** Fecha local (YYYY-MM-DD) en la zona del tutor. */
+  date: string;
+  reason: string | null;
+};
+
+/** Configuración completa de la agenda del tutor (GET/PUT me/availability). */
+export type AvailabilitySettings = {
+  /** Zona horaria IANA en la que el tutor define sus franjas. */
+  timeZoneId: string;
+  /** Interruptor maestro: false = el horario semanal no genera cupos. */
+  weeklyEnabled: boolean;
+  rules: AvailabilityRule[];
+  exceptions: AvailabilityException[];
+};
+
+/** Zonas horarias ofrecidas en el selector del portal (espejo del backend). */
+export const SUPPORTED_TIME_ZONES = [
+  { id: "America/Costa_Rica", label: "Costa Rica (GMT-6)" },
+  { id: "America/Mexico_City", label: "México (GMT-6)" },
+  { id: "America/Bogota", label: "Colombia (GMT-5)" },
+  { id: "America/Lima", label: "Perú (GMT-5)" },
+  { id: "America/Guatemala", label: "Guatemala (GMT-6)" },
+  { id: "America/New_York", label: "Nueva York (GMT-5/-4)" },
+  { id: "America/Chicago", label: "Chicago (GMT-6/-5)" },
+  { id: "America/Los_Angeles", label: "Los Ángeles (GMT-8/-7)" },
+  { id: "Europe/Madrid", label: "España (GMT+1/+2)" },
+  { id: "UTC", label: "UTC" },
+] as const;
+
+/** GET /api/tutors/me/availability — configuración completa de la agenda. */
 export async function fetchAvailability(
   token: string,
-): Promise<ApiResult<AvailabilityRule[]>> {
+): Promise<ApiResult<AvailabilitySettings>> {
   try {
     const res = await fetch(`${BASE_URL}/api/tutors/me/availability`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -683,23 +946,32 @@ export async function fetchAvailability(
     if (!res.ok) {
       return { ok: false, error: "No se pudo cargar tu disponibilidad." };
     }
-    const data = (await res.json()) as AvailabilityRule[];
+    const data = (await res.json()) as AvailabilitySettings;
     return { ok: true, data };
   } catch {
     return { ok: false, error: "No se pudo conectar con el servidor" };
   }
 }
 
-/** PUT /api/tutors/me/availability — reemplazo completo de las reglas. */
+/**
+ * PUT /api/tutors/me/availability — reemplazo completo de la configuración
+ * (zona horaria, toggle maestro, franjas y excepciones). Al cambiar la zona
+ * horaria, los cupos se regeneran en la zona seleccionada.
+ */
 export async function replaceAvailability(
   token: string,
-  rules: AvailabilityRule[],
+  settings: AvailabilitySettings,
 ): Promise<ApiResult<null>> {
   try {
     const res = await fetch(`${BASE_URL}/api/tutors/me/availability`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ rules }),
+      body: JSON.stringify({
+        timeZoneId: settings.timeZoneId,
+        weeklyEnabled: settings.weeklyEnabled,
+        rules: settings.rules,
+        exceptions: settings.exceptions,
+      }),
     });
     if (res.status === 401) {
       return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
@@ -712,12 +984,176 @@ export async function replaceAvailability(
       if (body?.error === "AVAILABILITY_OVERLAP") {
         return { ok: false, error: "Tienes franjas que se traslapan o duplicadas el mismo día." };
       }
+      if (body?.error === "AVAILABILITY_INVALID_TIMEZONE") {
+        return { ok: false, error: "La zona horaria seleccionada no es válida." };
+      }
+      if (body?.error === "AVAILABILITY_INVALID_EXCEPTIONS") {
+        return { ok: false, error: "Las excepciones deben ser fechas de hoy en adelante y no repetirse." };
+      }
       return { ok: false, error: "Hay franjas inválidas (inicio ≥ fin o minutos distintos de :00)." };
     }
     if (!res.ok) {
       return { ok: false, error: "No se pudo guardar tu disponibilidad." };
     }
     return { ok: true, data: null };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+// ── Reglas de reserva de la plataforma (espejo de BookingRulesController) ──
+
+/**
+ * Reglas de reserva definidas por el Admin (fila única en BD). Cada regla es
+ * opcional: null = el Admin no la definió (no se muestra en el portal del
+ * tutor y la lógica del backend usa el default de BOOKING_RULES_DEFAULTS).
+ */
+export type BookingRules = {
+  /** Anticipación mínima de cancelación (horas; default 12). */
+  cancellationNoticeHours: number | null;
+  /** Ventana para subir el comprobante SINPE (minutos; default 60). */
+  paymentWindowMinutes: number | null;
+  /** Duración de los slots (minutos; default 60; aún sin efecto en la generación). */
+  slotDurationMinutes: number | null;
+  /** Horizonte máximo de reserva (días; default 14). */
+  bookingHorizonDays: number | null;
+  /** Última actualización (ISO UTC). */
+  updatedAt: string;
+};
+
+/** Valores editables (para el PUT del Admin). */
+export type BookingRulesInput = Pick<
+  BookingRules,
+  "cancellationNoticeHours" | "paymentWindowMinutes" | "slotDurationMinutes" | "bookingHorizonDays"
+>;
+
+/** Defaults de plataforma cuando una regla quedó sin definir (espejo del backend). */
+export const BOOKING_RULES_DEFAULTS = {
+  cancellationNoticeHours: 12,
+  paymentWindowMinutes: 60,
+  slotDurationMinutes: 60,
+  bookingHorizonDays: 14,
+} as const;
+
+/** GET /api/booking-rules — reglas vigentes (endpoint público, sin PII). */
+export async function fetchBookingRules(): Promise<ApiResult<BookingRules>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/booking-rules`);
+    if (!res.ok) {
+      return { ok: false, error: "No se pudieron cargar las reglas de reserva." };
+    }
+    const data = (await res.json()) as BookingRules;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+/**
+ * PUT /api/admin/booking-rules — define las reglas de reserva (solo Admin).
+ * Campos null = dejar sin definir (usa el default y no se muestra al tutor).
+ */
+export async function updateBookingRules(
+  token: string,
+  rules: BookingRulesInput,
+): Promise<ApiResult<BookingRules>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/admin/booking-rules`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(rules),
+    });
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (res.status === 403) {
+      return { ok: false, error: "No tienes permisos de administrador." };
+    }
+    if (res.status === 422) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      switch (body?.error) {
+        case "BOOKING_RULES_INVALID_CANCELLATION_NOTICE":
+          return { ok: false, error: "La anticipación mínima debe estar entre 0 y 168 horas." };
+        case "BOOKING_RULES_INVALID_PAYMENT_WINDOW":
+          return { ok: false, error: "La ventana de pago SINPE debe estar entre 15 y 240 minutos." };
+        case "BOOKING_RULES_INVALID_SLOT_DURATION":
+          return { ok: false, error: "La duración de slots debe estar entre 15 y 180 minutos." };
+        case "BOOKING_RULES_INVALID_HORIZON":
+          return { ok: false, error: "La ventana máxima de reserva debe estar entre 1 y 56 días." };
+        default:
+          return { ok: false, error: "Hay valores fuera de los rangos permitidos." };
+      }
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudieron guardar las reglas." };
+    }
+    const data = (await res.json()) as BookingRules;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+// ── Perfil del tutor autenticado (espejo de TutorProfileController) ──
+
+/** GET /api/tutors/me/profile — datos de alta del tutor autenticado. */
+export async function fetchTutorProfile(
+  token: string,
+): Promise<ApiResult<TutorProfile>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/tutors/me/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: "No tienes un perfil de tutor. Postula en /postular." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo cargar tu perfil de tutor." };
+    }
+    const data = (await res.json()) as TutorProfile;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+/**
+ * PUT /api/tutors/me/profile — actualiza los datos de alta del tutor.
+ * Devuelve el estado canónico del perfil tras la escritura.
+ */
+export async function updateTutorProfile(
+  token: string,
+  payload: UpdateTutorProfilePayload,
+): Promise<ApiResult<TutorProfile>> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/tutors/me/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 400) {
+      return { ok: false, error: "Datos inválidos: revisa título, materias y tarifas." };
+    }
+    if (res.status === 404) {
+      return { ok: false, error: "No tienes un perfil de tutor. Postula en /postular." };
+    }
+    if (res.status === 409) {
+      return {
+        ok: false,
+        error: "Tu postulación fue rechazada: reenvíala desde /postular para actualizar tus datos.",
+      };
+    }
+    if (res.status === 401) {
+      return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+    }
+    if (!res.ok) {
+      return { ok: false, error: "No se pudo guardar tu perfil." };
+    }
+    const data = (await res.json()) as TutorProfile;
+    return { ok: true, data };
   } catch {
     return { ok: false, error: "No se pudo conectar con el servidor" };
   }

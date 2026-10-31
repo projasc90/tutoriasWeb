@@ -10,17 +10,75 @@ maxLines: 70
 Changelog por versión. Clasificación permitida: `feat`, `fix`, `refactor`, `db`, `test`, `docs`.
 > Histórico antiguo NO es carga automática (ver `CONTEXT_BUDGET.md`). Mantener detallada solo la versión actual.
 
+## v0.12.1 — 2026-10-16
+
+- **feat:** contenedores para desplegar la API + frontend en Vercel. Plan `docs/plans/2026-10-16-deploy-containers/`, ADR-008.
+  - **Topología (decisión del usuario):** API .NET en contenedor → **Railway** (Vercel no soporta .NET/contenedores) · BD → **Neon** · frontend → **Vercel** · CI/CD → GitHub Actions.
+  - **Backend:** `api/Dockerfile` multi-stage (SDK 10 build → aspnet 10 runtime, usuario no-root, imagen sin secretos), `api/entrypoint.sh` (PORT dinámico de Railway; migraciones opt-in `APPLY_MIGRATIONS=true` one-shot), `api/.dockerignore`; `Program.cs`: CORS por entorno (`Cors:Origins` separado por `;`, fallback localhost en dev), PORT dinámico (verificado: 200 en `/health` con `PORT=5099`), modo migraciones one-shot (`ApplyMigrations=true`).
+  - **Local:** `docker-compose.yml` (api + postgres 16-alpine, healthcheck, volúmenes pgdata/documents, puerto API 8080).
+  - **CI/CD:** `.github/workflows/api-deploy.yml` (PR: build+tests; main: build+tests → imagen a GHCR → migraciones one-shot → redeploy Railway; secrets `RAILWAY_TOKEN`/`RAILWAY_SERVICE`) y `.github/workflows/web-ci.yml` (lint+tsc+build; deploy nativo de Vercel).
+  - **Frontend:** `web/vercel.json` (framework nextjs, install `npm ci`), `.env.example` documentado para Vercel (`NEXT_PUBLIC_API_URL`).
+  - **Docs:** guía paso a paso Railway+Neon+Vercel en `deploy-guide.md`; `infra.instructions.md` actualizado a la topología real; `.ai/STACK.md` actualizado.
+  - **Gates:** 149/149 tests, lint 0 errores, tsc limpio, 3 YAML válidos. **Deuda explícita:** build Docker no verificado localmente (sin Docker/brew en la Mac; Railway lo validará al conectar el repo); despliegue real pendiente (manual, pasos en `deploy-guide.md`); `IFileStorage` → object storage si se requiere durabilidad multi-instancia.
+
+## v0.12.0 — 2026-10-16
+
+- **feat:** panel del estudiante + login exigido al reservar (con retorno al flujo) + gestión de estudiantes en el panel Admin. Plan `docs/plans/2026-10-16-student-panel/`.
+  - **Backend:** `[Authorize(Roles = "Estudiante")]` en `Create`/`SubmitComprobante`/`Cancel` (solo estudiantes reservan); `GET /api/admin/users` `[Admin]` (filtro `role`, búsqueda `query` sobre Email/FullName, paginado; 400 rol inválido) con `AdminUserDto`, `AdminUserSearchCriteria` + validador, `AdminUserService`, `IUserRepository.SearchAsync` + EF. Sin migración. DI en `Program.cs`.
+  - **Frontend:** `lib/redirect.ts` (redirect interno seguro); `/login` y `/registro` con `?redirect=` de retorno; CTA "Inicia sesión para reservar" en `/tutores/[id]` (banner + Link con `&slot=` preservado, preselección al volver); **panel estudiante** `/estudiante/{reservas,monedero}` (layout + `StudentSubnav`, guard por rol); `/mis-tutorias` → redirect; `/panel` y `PanelMenu` actualizados; **`/admin/estudiantes`** (búsqueda con debounce, filtro rol, paginación); landing Mentors con `GET /api/tutors` real (client, runtime; "Ver Perfil" navega; mock archivado); nav: "Para Universidades" eliminado, Logo → `/`.
+  - **Tests:** 149/149 (5 nuevos). **Gates:** verdes (21 rutas). **Smoke E2E navegador verde** (flujo completo sin login → login → retorno con slot → reserva → cancelación; admin filtra/busca).
+  - **Deuda explícita:** historial de movimientos del monedero (`GET /api/wallet/movements`, fuera de alcance); claim `email` sin mapear en `/api/auth/me` (preexistente).
+
+## v0.11.0 — 2026-10-12
+
+- **feat:** reglas de reserva definidas por el Admin (booking rules en BD). Plan `docs/plans/2026-10-12-booking-rules/`.
+  - **Backend:** entidad `BookingRules` (fila única, 4 reglas nullable + auditoría `updated_at`/`updated_by_user_id` sin FK), migración `AddBookingRules` (seed 12/60/60/14, rollback manual), `IBookingRulesRepository`/`BookingRulesRepository` (upsert), `BookingRulesService` + `UpdateBookingRulesValidator` (rangos por campo), `GET /api/booking-rules` público y `PUT /api/admin/booking-rules` `[Admin]` con errores `BOOKING_RULES_INVALID_*`.
+  - **Lógica gobernada por BD:** cancelación usa la anticipación de BD (fallback 12 h), ventana de pago SINPE en `CreateAsync` (fallback 60 min), horizonte ensure-ahead en `TutorService`/`SlotsController` (fallback 14 días). `slotDurationMinutes` persistida pero sin efecto (deuda: granularidad de franjas + índices).
+  - **Frontend:** `BookingRules`/`BOOKING_RULES_DEFAULTS`/`fetchBookingRules`/`updateBookingRules` en `api.ts`, hook `use-booking-rules`, tarjetas dinámicas en `/tutor/disponibilidad` (regla sin definir → no se muestra; nota "solo lectura"), **nueva página `/admin/configuracion`** + `BookingRulesForm` (vacío = sin definir), enlace en menú Admin, `mis-tutorias`/checkout leen la regla de BD (FAQ queda estática).
+  - **Tests:** 144/144 (23 nuevos TDD). **Gates:** verdes (18 rutas). Smoke curl (GET 200, PUT Admin 200, PUT Estudiante 403, 422 con código) y navegador verdes.
+  - **Deuda explícita:** efecto real de duración de slot (ADR futuro), caché de reglas, FAQ estática; usuario Admin de prueba `admin.test@auralearn.dev` creado para el smoke (eliminar).
+
+## v0.10.0 — 2026-10-11
+
+- **feat:** foto de perfil del tutor + X en franjas de disponibilidad. Plan `docs/plans/2026-10-11-tutor-photo-ui/`.
+  - **Backend:** `tutors.photo_path` (migración `AddTutorPhoto` + rollback manual), `IFileStorage.SavePhotoAsync` (carpeta `{tutorId}/photo/`, nombre generado por el servidor), `TutorPhotoService` (JPEG/PNG/WebP ≤5 MB, upsert borra previo), `POST /api/tutors/me/photo` (`[Authorize]`) y `GET /api/tutors/{id}/photo` **público** (la foto no es PII de verificación); `photoUrl` en `TutorDto` y `TutorProfileResponse`.
+  - **Frontend:** `ProfilePhotoCard` en `/tutor/perfil` (preview + reemplazar + invalidación de caché), foto en perfil público y tarjetas del directorio (fallback a iniciales); **X en la esquina superior derecha** de cada franja de disponibilidad (reemplaza el botón delete inline).
+  - **Tests:** 121/121 (9 nuevos TDD). **Gates:** verdes (17 rutas). Smoke API y navegador verdes (upload, GET público, DTO, preview, X por geometría).
+  - **Deuda explícita:** moderación de fotos (opcional), recorte de imagen (opcional); deuda histórica vigente (gaps-analysis).
+
+## v0.9.0 — 2026-10-11
+
+- **feat:** portal del tutor fase 2 — títulos acumulables, documentos post-aprobación y materias normalizadas. Plan `docs/plans/2026-10-11-tutor-portal-phase2/`.
+  - **Backend:** migración `TutorDocumentsAccumulateTitles` (índice único parcial solo `kind=3`; Título/Certificacion acumulan máx 5 c/u, rollback manual); `TutorDocumentService` — con `Verified` se pueden AGREGAR títulos/certificaciones (sin cambiar el estado) y la identificación responde 409 `IDENTIFICATION_LOCKED`; `SubjectNormalizer` (primera letra mayúscula por palabra, conectores en minúscula) aplicado en submit y update de perfil.
+  - **Frontend:** `lib/subjects.ts` (`normalizeSubject` + `suggestSubjectCorrection` con sugerencia inline "¿Quisiste decir X? [Usar]" en wizard y perfil); wizard pide 1..5 títulos acumulables; **nueva pestaña `/tutor/documentos`** (subnav + PanelMenu) con `DocumentsManager` (contadores n/5, agregar en cualquier estado, ID con candado si Verified); `lib/documents.ts` (validación compartida).
+  - **Tests:** 112/112 (6 nuevos). **Gates:** `dotnet build`/`test` verdes; `lint`/`tsc`/`build` verdes (17 rutas). Smoke API y navegador verdes (normalización en BD, acumulación post-aprobación, ID bloqueada, subida desde UI 3/5).
+  - **Entregable:** `gaps-analysis.md` — 16 gaps priorizados de la fase tutores (críticos: canal de sesión, pizarra realtime, notificaciones email, vista de ganancias).
+  - **Deuda explícita:** catálogo maestro de materias en BD; re-verificación de docs agregados post-aprobación (decisión de producto); deuda 0.8.0 vigente.
+
+## v0.8.0 — 2026-10-11
+
+- **feat:** documentos de verificación del tutor + menú condicionado por rol. Plan `docs/plans/2026-10-11-tutor-documents/`.
+  - **Backend:** tabla `tutor_documents` (migración `AddTutorDocuments` + rollback manual; índice único parcial `(tutor_id, kind) WHERE kind IN (1,3)`), enum `TutorDocumentKind`, puerto `IFileStorage` + `LocalFileStorage` (disco local fuera del repo; root `Storage:DocumentsRoot`, default `~/.auralearn/uploads/documents`; nombre físico generado por el servidor, sin path traversal), `ITutorDocumentRepository`, `TutorDocumentService` (PDF/JPEG/PNG ≤5 MB, upsert Titulo/Identificacion borra archivo previo, máx 5 certificaciones, `Verified` → 409 `DOCUMENTS_LOCKED`), `POST/GET /api/tutors/me/documents` (multipart) y `GET /api/admin/tutor-documents/{id}/file` (rol Admin, streaming). **Gate de aprobación:** `DecideAsync(approve)` exige los 3 kinds (tutores seed exentos) → 409 `MISSING_DOCUMENTS` con detalle; `AdminTutorApplicationDto.Documents`.
+  - **Frontend:** wizard `/postular` a 5 pasos con `StepDocuments` (3 tarjetas, validación espejo, precarga en re-postulación), `useTutorDocuments` (uploads secuenciales + reintento en `Confirmation`), `StepReview` resume archivos; cola admin con sección Documentos + botón "Ver" (blob URL con Authorization); **"Conviértete en Tutor" oculto del header para Tutor y Admin** (`SiteHeader` filtra `NAV_ITEMS` por rol de sesión).
+  - **Tests:** 106/106 (16 nuevos TDD: 13 de servicio + 3 de gate). **Gates:** `dotnet build`/`test` verdes; `lint`/`tsc`/`build` verdes (16 rutas). Smoke E2E API y navegador verdes (gate 409 → uploads → approve → descarga 200/403 → DOCUMENTS_LOCKED → rol promovido; wizard con archivos reales; menú condicionado).
+  - **Deuda explícita:** "completar documentos" desde la fase "en revisión" (postulaciones previas a 0.8.0 → 409 al aprobar); migración a blob/S3 (puerto `IFileStorage` listo, ADR-007); ver visualmente el botón "Ver" del admin.
+  - **ADR nuevo:** 007 (storage local de documentos tras `IFileStorage`).
+
+## v0.7.0 — 2026-10-11
+
+- **feat:** sección del tutor completa — promoción de rol, perfil editable y especialización. Plan `docs/plans/2026-10-11-tutor-profile-complete/`.
+  - **Fix crítico de rol:** `TutorApplicationService.DecideAsync(approve)` promueve `users.role` a `Tutor` (nuevo `IUserRepository.UpdateAsync` + `UserRepository.UpdateAsync`); 3 tests TDD. Los endpoints `[Authorize(Roles="Tutor")]` dejan de dar 403 al tutor real; el JWT fija el rol al login → re-login necesario (copy en la UI de estado).
+  - **Perfil editable:** `GET/PUT /api/tutors/me/profile` — `TutorProfileController` (`[Authorize]`; 404 sin fila de tutor), `TutorProfileService` + `UpdateTutorProfileValidator` (reglas espejo de la postulación), `TutorProfileResult<T>` tipado; `Rejected` → 409 `PROFILE_REJECTED_USE_REAPPLY`; PUT devuelve el estado canónico (200). Editables: título, especialización, universidad, bio, materias (1–8), tarifas; no editables: Rating/Reviews/Featured/estado/Nombre. 6 tests + 1 de submit con especialización.
+  - **Especialización:** migración `AddTutorSpecialization` (columna nullable `tutors.specialization` varchar(100), rollback manual); fluye por `SubmitTutorApplicationRequest`, `AdminTutorApplicationDto`, `TutorDto` (mapeos en `TutorService`).
+  - **Frontend:** `/tutor/perfil` (`ProfileForm` con tag-editor + barra sticky, `ProfileStatusCard` con progreso de verificación, motivo de rechazo + CTA re-postular, nota de re-login), layout `/tutor` con `TutorSubnav` (Perfil·Disponibilidad·Sesiones; `SiteHeader` retirado de sesiones/disponibilidad), `/tutor` → redirect a perfil, "Mi perfil de tutor" en `PanelMenu`, especialización en `TutorProfileHeader` y `application-card`; hook `use-tutor-profile`; `fetchTutorProfile`/`updateTutorProfile` en `lib/api.ts`; tipos en `lib/types/tutor-profile.ts`.
+  - **Wizard `/postular`:** `StepProfile` pide Especialización (opcional ≤100); payload, `StepReview` y `Confirmation` (ítem "Configura tus horarios") actualizados.
+  - **Fix colateral:** test flaky `GenerateSlots_con_reglas_solo_genera_dentro_de_las_franjas` era dependiente de la fecha (ventana de 8 días sin 2 jueves garantizados); ahora alinea el inicio por fecha local CR (GOTCHA-005).
+  - **Tests:** 90/90 (11 nuevos). **Gates:** `dotnet build`/`test` verdes; `lint`/`tsc`/`build` verdes (16 rutas, 3 nuevas). Smoke E2E API: postular → GET/PUT perfil → approve → rol Tutor en BD → availability 200.
+  - **Deuda explícita:** upload de atestados/documentos del título (diferido por decisión); catálogo maestro de materias; dashboard "Resumen" del panel; reseñas reales; refresh tokens (lag de rol mitigado con re-login + copy).
+
 ## v0.6.0 — 2026-10-01
 
-- **feat:** cierre de deuda de reservas — monedero al pagar, cierre de sesión con liquidación, disponibilidad semanal del tutor, expiración perezosa y reprogramación cancelar+crear. Plan `docs/plans/2026-10-01-reservations-closeout/`.
-  - **Fase 0 (desbloqueo):** migración `AddSlotsAndReservations` regenerada con tooling EF (Designer + snapshot sincronizado, índice duplicado eliminado); ensure-ahead cableado (ADR-005) en `SlotsController` + `TutorService` vía nuevo `SlotAvailabilityService` y `SlotRepository.EnsureAheadInRangeAsync` (pre-consulta + insert batch + purga de slots fuera de franjas sin reserva activa); `SinpeConfig` inyectada (quita 2 hardcodes); fix de negocio: cancelar una `PendingPayment` no acredita monedero; endpoint `GET /api/tutors/{id}` (200/404) + `fetchTutor`/`useTutor` reales; `AdminPaymentsController` con DI por ctor (sin service-locator).
-  - **Fase 1 (smoke E2E API, 15 escenarios):** reserva 201/replay 200/doble-booking 409 (guardián índice parcial)/comprobante 202+422/admin 204→Confirmed/cancelar ≥12 h → monedero 14500/cancelar PendingPayment → 0. **Bug arreglado:** la expiración perezosa no existía → `TryExpireIfDueAsync` con TDD (no expira la que tiene comprobante en cola; libera el slot al vencer).
-  - **Fase 2 (pago con monedero, ADR-006):** solo pago total — `useWalletBalance` + `IWalletRepository.TryDebitAsync` atómico (FOR UPDATE + SUM en lock; race-safe) + `WalletEntryReason.WalletPayment` (débito negativo); saldo insuficiente → fallback SINPE. La reserva se persiste ANTES del débito (FK 23503 detectado en smoke). Frontend: checkbox "Pagar con monedero" en `/tutores/[id]`; Confirmed → directo a `/mis-tutorias`.
-  - **Fase 3 (Completed + liquidación):** `PATCH /api/reservations/{id}/complete` (rol Tutor dueño, solo `Confirmed` con `EndAt <= now`) + `WalletEntryReason.TutorPayout` (retención hasta cerrar); `GET /api/reservations/tutor-sessions`; fix de contrato: `ReservationDto.TutorId` venía con `StudentId` + nuevo `StudentName`. Frontend: `/tutor/sesiones` (guard Tutor, completar, banner liquidado) + hook `use-tutor-sessions`.
-  - **Fase 4 (disponibilidad semanal):** entidad `TutorAvailability` (weekday + franja local CR), migración `AddTutorAvailability` (rollback manual), honoring en `SlotGenerationService` (overload con reglas; sin reglas → default 08-20 CR con comida excluida), purga de slots no reservables conservando los con reserva activa, `GET/PUT /api/tutors/me/availability` (204/422). Frontend: `/tutor/disponibilidad` (editor por día con `<input type="time">`) + hook `use-availability`.
-  - **Fase 5 (reprogramación):** decisión cancelar+crear (sin PATCH reschedule); botón "Reprogramar" en `/mis-tutorias` para Confirmed ≥12 h → navega al perfil del tutor; skill `slots-reservations` y GLOSSARY actualizados.
-  - **Tests:** 79/79 (60 previos + 19 nuevos TDD). **Gates:** `dotnet build`/`test` verdes; `lint`/`tsc`/`build` verdes (13 rutas, 2 nuevas).
-  - **Deuda explícita restante:** firma digital SINPE real (ADR-004 sigue vigente); pago parcial con monedero excluido por decisión; test de concurrencia contra Postgres real (Testcontainers sin configurar); refresh tokens/rate limiting; notificaciones email; upload de atestados; Playwright E2E; smoke de UI manual del flujo completo pendiente del usuario.
+- **feat:** cierre de deuda de reservas (plan `2026-10-01-reservations-closeout/`, 6 fases): migración regenerada con tooling + ensure-ahead cableado (ADR-005); smoke E2E API 15 escenarios → bug arreglado `TryExpireIfDueAsync` (TDD); pago con monedero ADR-006 (`TryDebitAsync` atómico FOR UPDATE, fallback SINPE); `Completed` con liquidación (`PATCH complete` + `TutorPayout` + `tutor-sessions`); disponibilidad semanal (`TutorAvailability`, honoring + purga, `GET/PUT me/availability`, `/tutor/disponibilidad`); reprogramación cancelar+crear. Tests 79/79; gates verdes (13 rutas). Detalle completo en `docs/plans/2026-10-01-reservations-closeout/`.
 
 ## v0.5.0 — 2026-09-29
 

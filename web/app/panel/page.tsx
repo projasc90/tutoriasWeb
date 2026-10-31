@@ -2,7 +2,7 @@
 
 /**
  * Redirección del panel según el rol del JWT (entry point único "Mi Panel").
- * Estudiante → /mis-tutorias · Tutor → /tutor/sesiones · Admin → /admin/pagos.
+ * Estudiante → /estudiante/reservas · Tutor → /tutor/sesiones · Admin → /admin/pagos.
  */
 
 import { useEffect } from "react";
@@ -24,7 +24,7 @@ export default function PanelRedirectPage() {
     const role = state.session.role;
     if (role === "Admin") router.replace("/admin/pagos");
     else if (role === "Tutor") router.replace("/tutor/sesiones");
-    else router.replace("/mis-tutorias");
+    else router.replace("/estudiante/reservas");
   }, [state, router]);
 
   return (

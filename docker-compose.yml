@@ -1,0 +1,56 @@
+# ── AuraLearn — entorno local con contenedores ──────────────────────
+# Espejo del despliegue: api (imagen del Dockerfile) + PostgreSQL 16.
+# Para producción la BD es Neon (connection string por variable de entorno
+# en Railway); este compose es solo para desarrollo/prueba de la imagen.
+#
+# Uso:
+#   docker compose up --build          # levantar
+#   docker compose down -v             # parar y borrar volumen
+#   curl http://localhost:8080/health  # healthcheck
+#
+# Secretos: este archivo es de desarrollo; en prod todo va por variables
+# de entorno del host (Railway). No subir connection strings reales.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: auralearn-postgres
+    environment:
+      POSTGRES_USER: auralearn
+      POSTGRES_PASSWORD: auralearn_dev
+      POSTGRES_DB: auralearn_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - auralearn-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auralearn -d auralearn_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: auralearn-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Postgres del compose (puerto local 5433 → interno 5432)
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=auralearn_dev;Username=auralearn;Password=auralearn_dev"
+      Jwt__Key: "dev-only-key-cambiar-en-produccion-32chars"
+      Jwt__Issuer: "AuraLearn.Api"
+      Cors__Origins: "http://localhost:3000"
+      Storage__DocumentsRoot: "/data/documents"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - auralearn-documents:/data/documents
+
+volumes:
+  auralearn-pgdata:
+  auralearn-documents:

@@ -15,6 +15,8 @@ maxLines: 80
 | [ADR-002](#adr-002) | shadcn/ui base-nova sobre @base-ui/react como sistema de componentes | Vigente | 2026-09-27 |
 | [ADR-003](#adr-003) | Solución .NET Clean Architecture 4 proyectos + EF Core PostgreSQL | Vigente | 2026-09-28 |
 | [ADR-006](#adr-006) | Pago de reservas con saldo del monedero (solo pago total) | Vigente | 2026-10-01 |
+| [ADR-007](#adr-007) | Storage de documentos de verificación en disco local tras IFileStorage | Vigente | 2026-10-11 |
+| [ADR-008](#adr-008) | Despliegue: API en contenedor (Railway) + Neon + frontend en Vercel | Vigente | 2026-10-16 |
 
 ## ADRs supersedidas
 
@@ -89,3 +91,43 @@ Ninguna todavía.
 - Sin pago parcial (SINPE por el remanente): complica la validación de monto exacto; queda excluido por decisión del usuario.
 
 **Consecuencias:** el índice único parcial sigue siendo el guardián de exclusividad (una reserva wallet-pagada es `Confirmed` y bloquea el slot); `GET /api/wallet` sirve a estudiantes y tutores; el ledger del tutor (liquidación) usará la misma tabla `wallet_entries` con nuevos reasons.
+
+---
+
+## ADR-007
+
+**Título:** Storage de documentos de verificación en disco local tras IFileStorage
+**Estado:** Vigente
+**Fecha:** 2026-10-11
+
+**Contexto:** La verificación de tutores exige subir documentos (título, certificaciones, identificación). Son PII: nunca en la BD ni en el repo; acceso de descarga restringido a rol Admin. No hay cuenta cloud configurada todavía (Azure/AWS).
+
+**Decisión:**
+- Puerto `IFileStorage` en Application (`SaveAsync/OpenAsync/DeleteAsync`); implementación `LocalFileStorage` en Infrastructure con root configurable `Storage:DocumentsRoot` (default dev `~/.auralearn/uploads/documents`, fuera del repo).
+- El nombre físico en disco lo genera el servidor (`{tutorId}/{kind}/{Guid}.{ext}`); el nombre original del usuario solo es metadato en BD. Verificación anti path-traversal al resolver rutas.
+- La BD guarda solo metadatos (`tutor_documents`: kind, file_name, content_type, size_bytes, storage_path, uploaded_at) con índice único parcial para los tipos upsert.
+- Descarga exclusiva por `GET /api/admin/tutor-documents/{id}/file` con `[Authorize(Roles="Admin")]` (streaming `File()`); el tutor consulta metadatos, no contenido.
+
+**Consecuencias:** migrar a Azure Blob/S3 en el futuro solo requiere otra implementación de `IFileStorage` (las rutas en BD son relativas al root); en prod definir `Storage:DocumentsRoot` (p. ej. `/var/lib/auralearn/uploads/documents`) con backup; los archivos huérfanos tras rollback manual de migración se limpian a mano.
+
+---
+
+## ADR-008
+
+**Título:** Despliegue: API en contenedor (Railway) + Neon + frontend en Vercel
+**Estado:** Vigente
+**Fecha:** 2026-10-16
+
+**Contexto:** el usuario pidió "contenedores para desplegar la API en Vercel". Vercel no soporta contenedores Docker ni .NET (solo runtimes serverless Node/Python/Go/Ruby). El usuario eligió explícitamente: BD Neon, frontend en Vercel, CI/CD con GitHub Actions, y Railway como host del contenedor de la API tras ver las alternativas.
+
+**Decisión:**
+- **API:** imagen Docker multi-stage (`api/Dockerfile`: SDK 10 build → aspnet 10 runtime, usuario no-root, `entrypoint.sh`). Despliegue en **Railway** (contenedor gestionado, HTTPS incluido).
+- **BD:** **Neon** (Postgres gestionado); connection string pooled por `ConnectionStrings__Default` en Railway. Npgsql es Postgres estándar: sin cambios de código.
+- **Frontend:** **Vercel** (Next.js nativo, `web/vercel.json`, env `NEXT_PUBLIC_API_URL`).
+- **CORS:** configurable por entorno (`Cors:Origins` separado por `;`) con fallback localhost en Development.
+- **PORT dinámico:** Railway inyecta `PORT`; el entrypoint fija `ASPNETCORE_URLS=http://0.0.0.0:$PORT` (verificado localmente).
+- **Migraciones:** opt-in explícito (`ApplyMigrations=true` / `APPLY_MIGRATIONS=true` → `Database.Migrate()` one-shot y termina). El servidor nunca las aplica en silencio en cada arranque.
+- **CI/CD:** `api-deploy.yml` (build+tests → GHCR → migraciones → redeploy Railway) y `web-ci.yml` (gate lint/tsc/build; deploy nativo de Vercel). Secretos solo en GitHub Secrets/Railway/Vercel.
+- **Local:** `docker-compose.yml` (api + postgres 16) espeja el despliegue.
+
+**Consecuencias:** `LocalFileStorage` requiere volumen en Railway (`/data`) — filesystem efímero sin él; para durabilidad fuerte migrar `IFileStorage` a object storage (ADR futuro). Neon free tier auto-suspende la BD tras inactividad (~1 s de cold start). Rotar `Jwt__Key` invalida sesiones (8 h). Guía operativa en `docs/plans/2026-10-16-deploy-containers/deploy-guide.md`. `infra.instructions.md` queda actualizado con esta topología (VPS/Azure/AWS siguen siendo alternativas válidas).

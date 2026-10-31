@@ -38,6 +38,10 @@ export default function TutorDetailPage() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [wallet, setWallet] = useState<number | null>(null);
   const [payWithWallet, setPayWithWallet] = useState(false);
+  // Slot pendiente de preseleccionar tras volver del login (?slot=...)
+  const [pendingSlotId, setPendingSlotId] = useState<string | null>(null);
+
+  const isAnonymous = authState.status === "anonymous";
 
   // Saldo disponible solo con sesión (para el toggle de pago con monedero)
   useEffect(() => {
@@ -50,6 +54,35 @@ export default function TutorDetailPage() {
     })();
     return () => { cancelled = true; };
   }, [token]);
+
+  // Retorno del login con slot preservado: preseleccionar cuando cargue el catálogo
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      const slotFromUrl = new URLSearchParams(window.location.search).get("slot");
+      if (!cancelled && slotFromUrl) setPendingSlotId(slotFromUrl);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingSlotId || slotsState.status !== "success") return;
+    if (!slotsState.data.some((s) => s.id === pendingSlotId)) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) {
+        setSelectedSlotId(pendingSlotId);
+        setPendingSlotId(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingSlotId, slotsState]);
 
   const slots: Slot[] = slotsState.status === "success" ? slotsState.data : [];
 
@@ -75,7 +108,7 @@ export default function TutorDetailPage() {
     if (result.ok) {
       // Pagado con saldo: la reserva nace Confirmed → directo al panel
       if (result.data.status === "Confirmed") {
-        router.push("/mis-tutorias");
+        router.push("/estudiante/reservas");
       } else {
         router.push(`/checkout/${result.data.id}`);
       }
@@ -251,6 +284,13 @@ export default function TutorDetailPage() {
                 disabled={!token}
                 loading={reservation.state.status === "loading"}
                 onSubmit={onReserve}
+                requiresLogin={isAnonymous}
+                loginHref={
+                  isAnonymous
+                    ? `/login?redirect=${encodeURIComponent(`/tutores/${tutorId}`)}` +
+                      (selectedSlotId ?? pendingSlotId ? `&slot=${selectedSlotId ?? pendingSlotId}` : "")
+                    : null
+                }
               />
             </div>
           </div>

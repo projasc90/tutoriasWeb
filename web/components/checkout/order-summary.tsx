@@ -7,6 +7,8 @@
  */
 
 import { MaterialIcon } from "@/components/material-icon";
+import { useBookingRules } from "@/hooks/use-booking-rules";
+import { BOOKING_RULES_DEFAULTS } from "@/lib/api";
 import { formatCrc } from "@/lib/time";
 
 export function OrderSummary(props: {
@@ -25,6 +27,13 @@ export function OrderSummary(props: {
     tutorName, tutorCredentials, tutorRating, tutorReviews,
     priceCrc, priceUsd, minutesLeft, submitState, submitLabel, onSubmit,
   } = props;
+
+  // Anticipación mínima de cancelación definida por el Admin (default 12 h)
+  const { state: reglasState } = useBookingRules();
+  const noticeHoras =
+    reglasState.status === "success"
+      ? (reglasState.data.cancellationNoticeHours ?? BOOKING_RULES_DEFAULTS.cancellationNoticeHours)
+      : BOOKING_RULES_DEFAULTS.cancellationNoticeHours;
 
   return (
     <div className="space-y-4 lg:sticky lg:top-28">
@@ -104,7 +113,7 @@ export function OrderSummary(props: {
           <div className="flex items-start gap-2 text-on-surface-variant">
             <MaterialIcon name="event_available" className="mt-0.5 shrink-0 text-[18px] text-primary" />
             <p className="leading-tight">
-              <strong>Cancelación sin costo:</strong> hasta 12 horas antes del inicio, con reembolso del 100% a tu monedero.
+              <strong>Cancelación sin costo:</strong> hasta {noticeHoras === 1 ? "1 hora" : `${noticeHoras} horas`} antes del inicio, con reembolso del 100% a tu monedero.
             </p>
           </div>
           <div className="flex items-start gap-2 text-on-surface-variant">

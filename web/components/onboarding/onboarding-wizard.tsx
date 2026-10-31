@@ -6,10 +6,12 @@ import { MaterialIcon } from "@/components/material-icon";
 import { fetchTutorApplicationStatus, registerUser } from "@/lib/api";
 import { readSession, saveSession, toSession } from "@/lib/auth";
 import { useTutorApplication } from "@/hooks/use-tutor-application";
+import { useTutorDocuments, type DocumentUpload } from "@/hooks/use-tutor-documents";
 import { Stepper, type StepDef } from "./shared";
 import { StepAccount, type AccountData } from "./step-account";
 import { StepProfile, type ProfileData } from "./step-profile";
 import { StepSubjects, type SubjectsData } from "./step-subjects";
+import { StepDocuments, type DocumentsData } from "./step-documents";
 import { StepReview } from "./step-review";
 import { Confirmation } from "./confirmation";
 
@@ -17,8 +19,31 @@ const STEPS: StepDef[] = [
   { label: "Cuenta", icon: "person" },
   { label: "Perfil", icon: "school" },
   { label: "Cursos", icon: "menu_book" },
+  { label: "Documentos", icon: "upload_file" },
   { label: "Revisión", icon: "rate_review" },
 ];
+
+const EMPTY_DOCUMENTS: DocumentsData = {
+  titulos: [],
+  certificaciones: [],
+  identificacion: null,
+  existing: [],
+};
+
+/** Archivos locales elegidos en el paso de documentos (los ya subidos no se re-envían). */
+function collectUploads(documents: DocumentsData): DocumentUpload[] {
+  const uploads: DocumentUpload[] = [];
+  for (const file of documents.titulos) {
+    uploads.push({ kind: "Titulo", file });
+  }
+  if (documents.identificacion) {
+    uploads.push({ kind: "Identificacion", file: documents.identificacion });
+  }
+  for (const file of documents.certificaciones) {
+    uploads.push({ kind: "Certificacion", file });
+  }
+  return uploads;
+}
 
 type Phase = "loading" | "wizard" | "already-submitted" | "confirmed";
 
@@ -26,13 +51,15 @@ export function OnboardingWizard() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [step, setStep] = useState(0);
   const [account, setAccount] = useState<AccountData>({ fullName: "", email: "", password: "" });
-  const [profile, setProfile] = useState<ProfileData>({ credentials: "", university: "", bio: "" });
+  const [profile, setProfile] = useState<ProfileData>({ credentials: "", specialization: "", university: "", bio: "" });
   const [subjects, setSubjects] = useState<SubjectsData>({ subjects: [], priceCrc: 0 });
+  const [documents, setDocuments] = useState<DocumentsData>(EMPTY_DOCUMENTS);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountSubmitting, setAccountSubmitting] = useState(false);
   const [statusInfo, setStatusInfo] = useState<{ status: string; rejectionReason: string | null } | null>(null);
 
   const { state: submitState, submit } = useTutorApplication();
+  const { state: uploadState, uploadAll } = useTutorDocuments();
 
   // Al montar: si ya hay sesión, precargar nombre, saltar al paso de perfil y
   // consultar el estado de la postulación (si ya postuló, mostrar su estado).
@@ -97,6 +124,7 @@ export function OnboardingWizard() {
       {
         fullName: account.fullName,
         credentials: profile.credentials,
+        specialization: profile.specialization.trim() || null,
         university: profile.university,
         bio: profile.bio,
         subjects: subjects.subjects,
@@ -105,7 +133,19 @@ export function OnboardingWizard() {
       },
       session.token,
     );
-    if (ok) setPhase("confirmed");
+    if (!ok) return;
+
+    // La postulación ya existe: subir los documentos elegidos (Titulo/
+    // Identificacion reemplazan; Certificacion acumula). Un fallo parcial no
+    // deshace la postulación: la confirmación ofrece reintento.
+    await uploadAll(collectUploads(documents), session.token);
+    setPhase("confirmed");
+  };
+
+  const handleRetryDocuments = async () => {
+    const session = readSession();
+    if (!session || uploadState.status !== "error") return;
+    await uploadAll(uploadState.failures, session.token);
   };
 
   if (phase === "loading") {
@@ -117,7 +157,17 @@ export function OnboardingWizard() {
   }
 
   if (phase === "confirmed") {
-    return <Confirmation fullName={account.fullName} email={account.email} />;
+    return (
+      <Confirmation
+        fullName={account.fullName}
+        email={account.email}
+        failedFileNames={
+          uploadState.status === "error" ? uploadState.failures.map((f) => f.file.name) : null
+        }
+        retrying={uploadState.status === "uploading"}
+        onRetryDocuments={handleRetryDocuments}
+      />
+    );
   }
 
   if (phase === "already-submitted" && statusInfo) {
@@ -158,13 +208,29 @@ export function OnboardingWizard() {
           />
         )}
         {step === 3 && (
+          <StepDocuments
+            defaultValues={documents}
+            onBack={() => setStep(2)}
+            onSubmit={(data) => {
+              setDocuments(data);
+              setStep(4);
+            }}
+          />
+        )}
+        {step === 4 && (
           <StepReview
             account={account}
             profile={profile}
             subjects={subjects}
+            documents={documents}
             submitting={submitState.status === "submitting"}
+            uploadProgress={
+              uploadState.status === "uploading"
+                ? { done: uploadState.done, total: uploadState.total }
+                : null
+            }
             serverError={submitState.status === "error" ? submitState.error : null}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(3)}
             onSubmit={handleSubmit}
           />
         )}

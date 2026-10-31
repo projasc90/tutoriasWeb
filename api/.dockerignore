@@ -1,0 +1,11 @@
+# Excluir artefactos de build y archivos locales del contexto de Docker
+**/bin/
+**/obj/
+**/tests/
+**/*.md
+**/.git
+**/.vs
+**/appsettings.Development.json
+Dockerfile
+docker-compose*.yml
+.dockerignore

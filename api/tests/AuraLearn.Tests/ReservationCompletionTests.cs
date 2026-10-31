@@ -52,7 +52,8 @@ public class ReservationCompletionTests
     public ReservationCompletionTests()
     {
         _service = new ReservationService(
-            _reservations, _slots, _wallet, new SinpeConfig("88888888"), new SinpeComprobanteValidator());
+            _reservations, _slots, _wallet, new SinpeConfig("88888888"), new SinpeComprobanteValidator(),
+            Substitute.For<IBookingRulesRepository>());
     }
 
     private Reservation CrearReserva(Guid slotId, ReservationStatus status = ReservationStatus.Confirmed)

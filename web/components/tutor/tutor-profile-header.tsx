@@ -6,7 +6,7 @@
  */
 
 import { MaterialIcon } from "@/components/material-icon";
-import type { Tutor } from "@/lib/api";
+import { tutorPhotoUrl, type Tutor } from "@/lib/api";
 
 export function TutorProfileHeader({ tutor, initials }: { tutor: Tutor; initials: string }) {
   return (
@@ -14,9 +14,18 @@ export function TutorProfileHeader({ tutor, initials }: { tutor: Tutor; initials
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         {/* Avatar + En Línea */}
         <div className="relative shrink-0">
-          <div className="grid h-28 w-28 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-headline-lg font-bold text-on-primary shadow-md sm:h-36 sm:w-36">
-            {initials}
-          </div>
+          {tutor.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tutorPhotoUrl(tutor.id)}
+              alt={`Foto de ${tutor.name}`}
+              className="h-28 w-28 rounded-xl object-cover shadow-md sm:h-36 sm:w-36"
+            />
+          ) : (
+            <div className="grid h-28 w-28 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-headline-lg font-bold text-on-primary shadow-md sm:h-36 sm:w-36">
+              {initials}
+            </div>
+          )}
           <span className="absolute -bottom-2 -right-2 flex items-center gap-1 rounded-full bg-surface-container-lowest px-2.5 py-1 text-label-sm font-bold text-primary shadow-md">
             <span className="h-2 w-2 animate-pulse rounded-full bg-primary-container" />
             En Línea
@@ -37,7 +46,8 @@ export function TutorProfileHeader({ tutor, initials }: { tutor: Tutor; initials
           </div>
           <h1 className="mb-1 text-headline-lg tracking-tight text-on-surface">{tutor.name}</h1>
           <p className="mb-4 text-title-md text-on-surface-variant">
-            {tutor.credentials} • Catedrático en {tutor.university}
+            {tutor.credentials}
+            {tutor.specialization ? ` — ${tutor.specialization}` : ""} • Catedrático en {tutor.university}
           </p>
 
           {/* KPI strip */}

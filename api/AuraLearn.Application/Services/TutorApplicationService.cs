@@ -16,6 +16,7 @@ public class SubmitTutorApplicationValidator : AbstractValidator<SubmitTutorAppl
     {
         RuleFor(r => r.FullName).NotEmpty().MaximumLength(200);
         RuleFor(r => r.Credentials).NotEmpty().MaximumLength(200);
+        RuleFor(r => r.Specialization).MaximumLength(100);
         RuleFor(r => r.University).NotEmpty().MaximumLength(100);
         RuleFor(r => r.Bio).NotEmpty().MaximumLength(1000);
         RuleFor(r => r.Subjects).NotEmpty().Must(s => s.Count <= 8)
@@ -34,8 +35,13 @@ public class SubmitTutorApplicationValidator : AbstractValidator<SubmitTutorAppl
 public class TutorApplicationService(
     ITutorRepository tutors,
     IUserRepository users,
-    SubmitTutorApplicationValidator validator)
+    SubmitTutorApplicationValidator validator,
+    ITutorDocumentRepository documents)
 {
+    /// <summary>Tipos de documento exigidos para aprobar una postulación con usuario real.</summary>
+    private static readonly TutorDocumentKind[] RequiredDocumentKinds =
+        [TutorDocumentKind.Titulo, TutorDocumentKind.Certificacion, TutorDocumentKind.Identificacion];
+
     public async Task<TutorApplicationResult<TutorApplicationResponse>> SubmitAsync(
         Guid userId, SubmitTutorApplicationRequest request, CancellationToken ct)
     {
@@ -55,9 +61,10 @@ public class TutorApplicationService(
             // Re-postulación tras rechazo: se actualiza la fila y vuelve a PendingReview.
             existing.Name = request.FullName;
             existing.Credentials = request.Credentials;
+            existing.Specialization = request.Specialization;
             existing.University = request.University;
             existing.Bio = request.Bio;
-            existing.Subjects = [.. request.Subjects];
+            existing.Subjects = [.. request.Subjects.Select(SubjectNormalizer.Normalize)];
             existing.PriceCrc = request.PriceCrc;
             existing.PriceUsd = request.PriceUsd;
             existing.VerificationStatus = VerificationStatus.PendingReview;
@@ -74,9 +81,10 @@ public class TutorApplicationService(
             UserId = userId,
             Name = request.FullName,
             Credentials = request.Credentials,
+            Specialization = request.Specialization,
             University = request.University,
             Bio = request.Bio,
-            Subjects = [.. request.Subjects],
+            Subjects = [.. request.Subjects.Select(SubjectNormalizer.Normalize)],
             PriceCrc = request.PriceCrc,
             PriceUsd = request.PriceUsd,
             Rating = 0m,
@@ -106,7 +114,14 @@ public class TutorApplicationService(
     public async Task<IReadOnlyList<AdminTutorApplicationDto>> ListPendingAsync(CancellationToken ct)
     {
         var pending = await tutors.GetPendingAsync(ct);
-        return [.. pending.Select(ToAdminDto)];
+        var result = new List<AdminTutorApplicationDto>(pending.Count);
+        foreach (var tutor in pending)
+        {
+            var docs = await documents.ListByTutorAsync(tutor.Id, ct);
+            result.Add(ToAdminDto(tutor, docs));
+        }
+
+        return result;
     }
 
     public async Task<TutorApplicationResult<TutorApplicationResponse>> DecideAsync(
@@ -122,18 +137,58 @@ public class TutorApplicationService(
         if (decision == "reject" && string.IsNullOrWhiteSpace(reason))
             return TutorApplicationResult<TutorApplicationResponse>.Invalid();
 
+        // Gate de documentos: aprobar exige los 3 tipos cargados (solo tutores con
+        // usuario real; los seed demo sin UserId quedan exentos).
+        if (decision == "approve" && tutor.UserId is not null)
+        {
+            var docs = await documents.ListByTutorAsync(tutor.Id, ct);
+            var missing = RequiredDocumentKinds
+                .Where(kind => !docs.Any(d => d.Kind == kind))
+                .ToList();
+            if (missing.Count > 0)
+            {
+                return TutorApplicationResult<TutorApplicationResponse>.Conflict(
+                    TutorApplicationErrors.MissingDocuments,
+                    "Faltan documentos: " + string.Join(", ", missing.Select(KindLabel)));
+            }
+        }
+
         tutor.VerificationStatus = decision == "approve"
             ? VerificationStatus.Verified
             : VerificationStatus.Rejected;
         tutor.RejectionReason = decision == "reject" ? reason : null;
 
         await tutors.UpdateAsync(tutor, ct);
+
+        // Promoción de rol: al aprobar, el usuario pasa a ser Tutor. Los endpoints
+        // [Authorize(Roles = "Tutor")] (disponibilidad, sesiones, complete) dependen
+        // del claim role del JWT, que se emite al iniciar sesión.
+        if (decision == "approve" && tutor.UserId is { } tutorUserId)
+        {
+            var user = await users.GetByIdAsync(tutorUserId, ct);
+            if (user is not null && user.Role != Role.Tutor)
+            {
+                user.Role = Role.Tutor;
+                await users.UpdateAsync(user, ct);
+            }
+        }
+
         return TutorApplicationResult<TutorApplicationResponse>.Decided(
             new TutorApplicationResponse(tutor.Id, tutor.VerificationStatus.ToString()));
     }
 
-    private static AdminTutorApplicationDto ToAdminDto(Tutor t) =>
+    private static AdminTutorApplicationDto ToAdminDto(Tutor t, IReadOnlyList<TutorDocument> docs) =>
         new(
-            t.Id, t.UserId ?? Guid.Empty, t.Name, t.Credentials, t.University, t.Bio,
-            t.Subjects, t.PriceCrc, t.PriceUsd, t.VerificationStatus.ToString(), t.CreatedAt);
+            t.Id, t.UserId ?? Guid.Empty, t.Name, t.Credentials, t.Specialization, t.University, t.Bio,
+            t.Subjects, t.PriceCrc, t.PriceUsd, t.VerificationStatus.ToString(), t.CreatedAt,
+            [.. docs.Select(d => new TutorDocumentItemDto(d.Id, d.Kind, d.FileName, d.ContentType, d.SizeBytes, d.UploadedAt))]);
+
+    /// <summary>Etiqueta en español del tipo de documento (para el detalle del 409).</summary>
+    private static string KindLabel(TutorDocumentKind kind) => kind switch
+    {
+        TutorDocumentKind.Titulo => "Título académico",
+        TutorDocumentKind.Certificacion => "Certificaciones",
+        TutorDocumentKind.Identificacion => "Identificación",
+        _ => kind.ToString(),
+    };
 }

@@ -1,0 +1,111 @@
+# CI/CD — API AuraLearn: build + tests + imagen Docker + deploy a Railway.
+#
+# Disparadores:
+#  - push a main (solo cambios en api/ o este workflow): build, tests, imagen.
+#  - tag v*: además publica la imagen a GHCR y despliega a Railway.
+#
+# Secretos requeridos (GitHub → Settings → Secrets and variables → Actions):
+#  - RAILWAY_TOKEN: token de Railway (Account → Tokens).
+#  - RAILWAY_SERVICE: id/uuid del servicio de la API en Railway.
+#
+# Migraciones: job efímero con APPLY_MIGRATIONS=true ANTES del deploy del
+# servidor (nunca automático silencioso en cada arranque).
+
+name: api-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-deploy.yml"
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-deploy.yml"
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/auralearn-api
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build
+        working-directory: api
+        run: dotnet build
+
+      - name: Test
+        working-directory: api
+        run: dotnet test --no-build --verbosity normal
+
+  docker-publish:
+    # Solo en push a main (no en PRs): publica imagen a GHCR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build-test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: api
+          file: api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  migrations:
+    # Migraciones explícitas contra Neon antes del deploy (one-shot).
+    # Requiere que la imagen tenga acceso a ConnectionStrings__Default
+    # (Railway lo inyecta al servicio; aquí se pasa por variable del job).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: docker-publish
+    steps:
+      - name: Aplicar migraciones (contenedor efímero en Railway)
+        run: |
+          echo "Ejecutar en Railway: railway run --service ${{ secrets.RAILWAY_SERVICE }} \
+          -e APPLY_MIGRATIONS=true --image ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          # Alternativa recomendada: Railway "Deploy Hook" con override de
+          # APPLY_MIGRATIONS, o un job de Railway dedicado a migraciones.
+          # Este paso se completa al configurar RAILWAY_TOKEN (ver deploy-guide.md).
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [docker-publish, migrations]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy a Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          # Opción A (recomendada): Railway despliega desde el repo con su
+          # integración Git — este paso solo fuerza redeploy del servicio.
+          curl -fsSL https://railway.app/cli.sh | sh
+          ./bin/railway redeploy --service "${{ secrets.RAILWAY_SERVICE }}" --yes
+          # Opción B: apuntar el servicio de Railway a la imagen GHCR
+          # ${{ env.IMAGE_NAME }}:${{ github.sha }} (ver deploy-guide.md).

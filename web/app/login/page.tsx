@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/material-icon";
 import { useAuth } from "@/hooks/use-auth";
+import { DEFAULT_LOGIN_REDIRECT, readInternalRedirect } from "@/lib/redirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,19 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Redirect se lee tras el mount (client-only) para no exigir Suspense en prerender.
+  const [redirect, setRedirect] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) setRedirect(readInternalRedirect(window.location.search));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const set = (key: "email" | "password") => (e: React.ChangeEvent<HTMLInputElement>) => {
     if (key === "email") setEmail(e.target.value);
@@ -40,7 +54,7 @@ export default function LoginPage() {
       setServerError(result.error ?? "No se pudo iniciar sesión.");
       return;
     }
-    router.push("/tutores");
+    router.push(redirect ?? DEFAULT_LOGIN_REDIRECT);
   };
 
   return (
@@ -59,6 +73,15 @@ export default function LoginPage() {
           <p className="text-body-md text-on-surface-variant">
             Accede a tus tutorías, reservas y progresos.
           </p>
+          {redirect && (
+            <p
+              role="status"
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary-container/40 px-3 py-2 text-label-md text-on-primary-container"
+            >
+              <MaterialIcon name="lock_open" className="text-[18px]" aria-hidden />
+              Inicia sesión para continuar con tu reserva
+            </p>
+          )}
         </div>
 
         <form
@@ -144,7 +167,10 @@ export default function LoginPage() {
 
           <p className="text-center text-body-md text-on-surface-variant">
             ¿No tienes cuenta?{" "}
-            <a href="/registro" className="text-primary font-semibold hover:underline">
+            <a
+              href={redirect ? `/registro?redirect=${encodeURIComponent(redirect)}` : "/registro"}
+              className="text-primary font-semibold hover:underline"
+            >
               Regístrate gratis
             </a>
           </p>

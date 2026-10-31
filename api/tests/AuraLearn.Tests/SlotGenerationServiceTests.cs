@@ -128,13 +128,25 @@ public class SlotGenerationServiceTests
     // ── Honoring de disponibilidad semanal (reglas del tutor) ──
 
     /// <summary>Helper: regla de disponibilidad para un día de la semana (0=dom…6=sáb).</summary>
-    private static TutorAvailability ReglaSimple(Guid tutorId, int weekday, string inicio, string fin) => new()
+    private static TutorAvailability ReglaSimple(Guid tutorId, int weekday, string inicio, string fin, bool isRecurring = true, DateOnly? anchorDate = null, bool weeklyEnabled = true) => new()
     {
         Id = Guid.NewGuid(),
         TutorId = tutorId,
         Weekday = weekday,
         StartLocal = TimeOnly.Parse(inicio),
         EndLocal = TimeOnly.Parse(fin),
+        WeeklyEnabled = weeklyEnabled,
+        IsRecurring = isRecurring,
+        AnchorDate = anchorDate,
+        Tutor = null!,
+    };
+
+    private static TutorAvailabilityException Excepcion(Guid tutorId, DateOnly date, string? reason = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        TutorId = tutorId,
+        Date = date,
+        Reason = reason,
         Tutor = null!,
     };
 
@@ -144,15 +156,22 @@ public class SlotGenerationServiceTests
         var tutorId = Guid.NewGuid();
         // Jueves (4) 14:00–18:00 CR
         var regla = ReglaSimple(tutorId, weekday: 4, inicio: "14:00", fin: "18:00");
-        var from = DateTime.UtcNow.Date.AddDays(7);
-        var to = from.AddDays(8); // una semana completa futura
+        // Ventana determinista: el primer día LOCAL CR del rango es un jueves
+        // futuro, de modo que los 8 días locales contienen exactamente 2 jueves.
+        // (Alinear en UTC era incorrecto: medianoche UTC = 18:00 del día anterior
+        // en CR, y el test fallaba según el día de la semana de ejecución.)
+        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        var hoyCr = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, crZone).Date;
+        var diasHastaJueves = ((DayOfWeek.Thursday - hoyCr.DayOfWeek) + 7) % 7;
+        var primerJueves = hoyCr.AddDays(7 + diasHastaJueves); // medianoche local CR
+        var from = TimeZoneInfo.ConvertTimeToUtc(primerJueves, crZone);
+        var to = TimeZoneInfo.ConvertTimeToUtc(primerJueves.AddDays(8), crZone);
 
         var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla]);
 
         // Solo slots del día elegido y dentro de la franja: 14:00–17:00 CR.
         // El rango de 8 días abarca 2 jueves → 8 slots (4 por cada uno).
         Assert.Equal(8, slots.Count);
-        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
         Assert.All(slots, s =>
         {
             var local = TimeZoneInfo.ConvertTimeFromUtc(s.StartAt, crZone);
@@ -208,5 +227,169 @@ public class SlotGenerationServiceTests
         // 11 slots por día (08–11 y 13–19: la 12:00 es comida y el día termina 20:00)
         Assert.Equal(11, conNull.Count);
         Assert.Equal(11, conVacias.Count);
+    }
+
+    // ── Toggle recurrente (IsRecurring) ────────────────────────────
+
+    [Fact]
+    public void GenerateSlots_regla_no_recurrente_genera_solo_en_la_fecha_ancla()
+    {
+        var tutorId = Guid.NewGuid();
+        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        var hoyCr = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, crZone).Date;
+        var diasHastaJueves = ((DayOfWeek.Thursday - hoyCr.DayOfWeek) + 7) % 7;
+        var primerJueves = hoyCr.AddDays(7 + diasHastaJueves);
+        var segundoJueves = primerJueves.AddDays(7);
+
+        // No recurrente anclada al PRIMER jueves del rango
+        var regla = ReglaSimple(tutorId, weekday: 4, inicio: "14:00", fin: "18:00",
+            isRecurring: false, anchorDate: DateOnly.FromDateTime(primerJueves));
+
+        var from = TimeZoneInfo.ConvertTimeToUtc(primerJueves, crZone);
+        var to = TimeZoneInfo.ConvertTimeToUtc(primerJueves.AddDays(8), crZone);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla]);
+
+        // Solo 4 slots (el primer jueves), no 8 (los dos jueves del rango)
+        Assert.Equal(4, slots.Count);
+        var fechas = slots.Select(s => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(s.StartAt, crZone))).Distinct().ToList();
+        Assert.Single(fechas);
+        Assert.Equal(DateOnly.FromDateTime(primerJueves), fechas[0]);
+    }
+
+    [Fact]
+    public void GenerateSlots_regla_recurrente_genera_en_todas_las_ocurrencias()
+    {
+        var tutorId = Guid.NewGuid();
+        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        var hoyCr = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, crZone).Date;
+        var diasHastaJueves = ((DayOfWeek.Thursday - hoyCr.DayOfWeek) + 7) % 7;
+        var primerJueves = hoyCr.AddDays(7 + diasHastaJueves);
+
+        var regla = ReglaSimple(tutorId, weekday: 4, inicio: "14:00", fin: "18:00", isRecurring: true);
+
+        var from = TimeZoneInfo.ConvertTimeToUtc(primerJueves, crZone);
+        var to = TimeZoneInfo.ConvertTimeToUtc(primerJueves.AddDays(8), crZone);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla]);
+
+        Assert.Equal(8, slots.Count); // 2 jueves × 4 slots
+    }
+
+    [Fact]
+    public void GenerateSlots_regla_no_recurrente_sin_ancla_no_genera()
+    {
+        var tutorId = Guid.NewGuid();
+        var regla = ReglaSimple(tutorId, weekday: 2, inicio: "09:00", fin: "11:00",
+            isRecurring: false, anchorDate: null);
+
+        var from = DateTime.UtcNow.Date.AddDays(7);
+        var to = from.AddDays(7);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla]);
+
+        Assert.Empty(slots);
+    }
+
+    // ── Toggle maestro (WeeklyEnabled) ─────────────────────────────
+
+    [Fact]
+    public void GenerateSlots_horario_deshabilitado_no_genera()
+    {
+        var tutorId = Guid.NewGuid();
+        var regla = ReglaSimple(tutorId, weekday: 2, inicio: "09:00", fin: "11:00", weeklyEnabled: false);
+
+        var from = DateTime.UtcNow.Date.AddDays(7);
+        var to = from.AddDays(7);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla]);
+
+        Assert.Empty(slots);
+    }
+
+    // ── Excepciones y feriados ────────────────────────────────────
+
+    [Fact]
+    public void GenerateSlots_excepcion_bloquea_la_fecha_ancla_de_franja_no_recurrente()
+    {
+        var tutorId = Guid.NewGuid();
+        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        var hoyCr = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, crZone).Date;
+        var diasHastaJueves = ((DayOfWeek.Thursday - hoyCr.DayOfWeek) + 7) % 7;
+        var primerJueves = hoyCr.AddDays(7 + diasHastaJueves);
+
+        var regla = ReglaSimple(tutorId, weekday: 4, inicio: "14:00", fin: "18:00",
+            isRecurring: false, anchorDate: DateOnly.FromDateTime(primerJueves));
+        var excepcion = Excepcion(tutorId, DateOnly.FromDateTime(primerJueves), "Feriado");
+
+        var from = TimeZoneInfo.ConvertTimeToUtc(primerJueves, crZone);
+        var to = TimeZoneInfo.ConvertTimeToUtc(primerJueves.AddDays(8), crZone);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla], excepciones: [excepcion]);
+
+        Assert.Empty(slots);
+    }
+
+    [Fact]
+    public void GenerateSlots_excepcion_bloquea_solo_esa_fecha_en_franja_recurrente()
+    {
+        var tutorId = Guid.NewGuid();
+        var crZone = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        var hoyCr = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, crZone).Date;
+        var diasHastaJueves = ((DayOfWeek.Thursday - hoyCr.DayOfWeek) + 7) % 7;
+        var primerJueves = hoyCr.AddDays(7 + diasHastaJueves);
+
+        var regla = ReglaSimple(tutorId, weekday: 4, inicio: "14:00", fin: "18:00", isRecurring: true);
+        var excepcion = Excepcion(tutorId, DateOnly.FromDateTime(primerJueves), "Feriado");
+
+        var from = TimeZoneInfo.ConvertTimeToUtc(primerJueves, crZone);
+        var to = TimeZoneInfo.ConvertTimeToUtc(primerJueves.AddDays(8), crZone);
+
+        var slots = SlotGenerationService.GenerateSlots(tutorId, from, to, [regla], excepciones: [excepcion]);
+
+        // Solo los slots del SEGUNDO jueves (el primero está bloqueado)
+        Assert.Equal(4, slots.Count);
+        var fechas = slots.Select(s => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(s.StartAt, crZone))).Distinct().ToList();
+        Assert.Single(fechas);
+        Assert.Equal(DateOnly.FromDateTime(primerJueves.AddDays(7)), fechas[0]);
+    }
+
+    // ── Zona horaria del tutor ────────────────────────────────────
+
+    [Fact]
+    public void GenerateSlots_con_zona_horaria_genera_en_la_zona_indicada()
+    {
+        var tutorId = Guid.NewGuid();
+        // Franja 09:00–11:00 en Bogotá (GMT-5, sin DST)
+        var regla = ReglaSimple(tutorId, weekday: 2, inicio: "09:00", fin: "11:00");
+        var from = DateTime.UtcNow.Date.AddDays(7);
+        var to = from.AddDays(7);
+
+        var slots = SlotGenerationService.GenerateSlots(
+            tutorId, from, to, [regla], timeZoneId: "America/Bogota");
+
+        Assert.Equal(2, slots.Count);
+        var bogotaZone = TimeZoneInfo.FindSystemTimeZoneById("America/Bogota");
+        Assert.All(slots, s =>
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(s.StartAt, bogotaZone);
+            Assert.Equal(DayOfWeek.Tuesday, local.DayOfWeek);
+            Assert.True(local.Hour >= 9 && local.Hour < 11);
+        });
+    }
+
+    [Fact]
+    public void GenerateSlots_zona_invalida_cae_en_costa_rica()
+    {
+        var tutorId = Guid.NewGuid();
+        var regla = ReglaSimple(tutorId, weekday: 2, inicio: "09:00", fin: "11:00");
+        var from = DateTime.UtcNow.Date.AddDays(7);
+        var to = from.AddDays(7);
+
+        var slots = SlotGenerationService.GenerateSlots(
+            tutorId, from, to, [regla], timeZoneId: "Zona/Inexistente");
+
+        // Fallback CR: 09:00–11:00 CR = 2 slots
+        Assert.Equal(2, slots.Count);
     }
 }

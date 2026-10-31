@@ -28,6 +28,7 @@ public class AdminTutorApplicationsController(TutorApplicationService service) :
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Verify(Guid id, VerifyTutorApplicationRequest request, CancellationToken ct)
     {
         var result = await service.DecideAsync(id, request.Decision, request.Reason, ct);
@@ -37,6 +38,14 @@ public class AdminTutorApplicationsController(TutorApplicationService service) :
 
         if (result.IsNotFound)
             return NotFound(new ProblemDetails { Title = "Postulación no encontrada", Status = StatusCodes.Status404NotFound });
+
+        // Gate de documentos: aprobar sin los 3 tipos cargados → 409 con detalle.
+        if (result.IsConflict)
+            return Conflict(new
+            {
+                error = result.ErrorCode ?? TutorApplicationErrors.MissingDocuments,
+                detail = result.ErrorDetail,
+            });
 
         return NoContent();
     }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/material-icon";
 import { useAuth } from "@/hooks/use-auth";
+import { DEFAULT_LOGIN_REDIRECT, readInternalRedirect } from "@/lib/redirect";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -12,6 +13,19 @@ export default function RegistroPage() {
   const [errors, setErrors] = useState<{ fullName?: string; email?: string; password?: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Redirect se lee tras el mount (client-only) para no exigir Suspense en prerender.
+  const [redirect, setRedirect] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) setRedirect(readInternalRedirect(window.location.search));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const set = (key: keyof typeof data) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setData((d) => ({ ...d, [key]: e.target.value }));
@@ -39,7 +53,7 @@ export default function RegistroPage() {
       setServerError(result.error ?? "No se pudo crear la cuenta.");
       return;
     }
-    router.push("/tutores");
+    router.push(redirect ?? DEFAULT_LOGIN_REDIRECT);
   };
 
   const inputClass =
@@ -61,6 +75,15 @@ export default function RegistroPage() {
           <p className="text-body-md text-on-surface-variant">
             Reserva tutorías verificadas y paga con SINPE Móvil.
           </p>
+          {redirect && (
+            <p
+              role="status"
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary-container/40 px-3 py-2 text-label-md text-on-primary-container"
+            >
+              <MaterialIcon name="lock_open" className="text-[18px]" aria-hidden />
+              Crea tu cuenta para continuar con tu reserva
+            </p>
+          )}
         </div>
 
         <form

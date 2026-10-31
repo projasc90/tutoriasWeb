@@ -9,29 +9,43 @@ maxLines: 120
 
 > Máximo 5 entradas. La más reciente arriba con detalle completo; las anteriores resumen en tabla compacta.
 
-## Sprint actual — Full-stack funcional (catálogo + reserva + pago SINPE)
+## Sprint actual — Panel estudiante + login en reserva + admin de estudiantes (0.12.0)
 
-**Periodo:** 2026-09-27 → abierto
-**Versión:** backend .NET 10 (ADR-003) · frontend 0.6.0
+**Periodo:** 2026-10-16
+**Versión:** backend .NET 10 (ADR-003) · frontend 0.12.0
 
 ### Hecho
-- **Cierre de deuda de reservas** (plan `2026-10-01-reservations-closeout/` cerrado): 6 fases. F0 desbloqueo (migración regenerada con tooling, ensure-ahead cableado, SinpeConfig real, fix monedero PendingPayment, GET /tutors/{id}); F1 smoke E2E API 15 escenarios + bug arreglado (expiración perezosa inexistente → `TryExpireIfDueAsync` con TDD); F2 pago con monedero ADR-006 (`TryDebitAsync` atómico FOR UPDATE, `WalletPayment`, fallback SINPE); F3 Completed con liquidación (`PATCH complete` tutor dueño, `TutorPayout`, `tutor-sessions`, fix TutorId/StudentName del DTO, `/tutor/sesiones`); F4 disponibilidad semanal (`TutorAvailability` + migración rollback manual, honoring + purga, `GET/PUT me/availability`, `/tutor/disponibilidad`); F5 reprogramación cancelar+crear (botón en `/mis-tutorias`, skill + GLOSSARY). 79/79 tests; gates verdes (13 rutas). ADR-006. Bump 0.6.0.
-- **Motor de slots y reservas + pago SINPE** (plan `2026-09-29-slots-reservations/` cerrado): reemplaza el `nextSlot` demo. Backend: entidades `Slot`/`Reservation`/`WalletEntry` + enums, `ReservationStateMachine` (Domain), `SinpeComprobanteValidator` (monto + nº confirmación único + receptor + ventana), `ReservationService` (crear/comprobante/cancelar/decidir), **índice único parcial `(slot_id) WHERE status IN (1,2)`** como guardián de exclusividad, migración `AddSlotsAndReservations` con ROLLBACK MANUAL. ADR-004 (confirmación manual SINPE por Admin) + ADR-005 (UTC en BD, zona CR en presentación, ensure-ahead). 34 tests nuevos (60/60 verde). Frontend: `nextSlotAt`, 10 funciones nuevas en `lib/api.ts`, 4 hooks (`use-tutor-slots`/`use-reservation`+poll/`use-my-reservations`/`use-admin-payments`), helpers `lib/time.ts` (Intl + `America/Costa_Rica`), 4 pantallas nuevas (`/tutores/[id]`, `/checkout/[id]`, `/mis-tutorias`, `/admin/pagos`). Gates verdes. Bump 0.5.0.
-- **Panel admin de aprobación** (plan `2026-09-29-admin-panel/` cerrado): `/admin/tutores` con guard por rol, cola con `useAdminApplications`, rechazo con motivo obligatorio (modal ≥10 chars) y aprobación contra `PATCH {id}/verify`; recarga automática. Smoke E2E con el usuario admin real. Bump 0.4.2.
-- **Onboarding del Profesor full-stack** (plan `2026-09-28-tutor-onboarding/` cerrado): wizard `/postular` 4 pasos + confirmación; endpoints de postulación y decisión admin; migración `AddTutorUserId` (rollback manual); 18 tests TDD (25/25). Bump 0.4.0.
-- **Auth implementada con TDD** (plan `2026-09-28-auth-endpoints/` cerrado) y **Auth UI** (`2026-09-28-auth-ui/`): register/login/me con JWT + PBKDF2 + páginas de sesión.
-- **Backend .NET 10 implementado** (plan `2026-09-28-api-scaffold/` cerrado, ADR-003) y **frontend conectado** (`2026-09-28-connect-frontend-api/`).
-- Sistema de memoria externa y gobernanza (ADR-001).
+- **Plan `2026-10-16-student-panel/` cerrado**:
+  - **Backend:** `[Authorize(Roles = "Estudiante")]` en `Create`/`SubmitComprobante`/`Cancel` de `ReservationsController` (Tutor/Admin ya no pueden reservar); `AdminUserDto`, `AdminUserSearchCriteria` + validador (MaxPageSize 100), `AdminUserService`, `AdminUsersController` (`GET /api/admin/users?query&role&page&pageSize`, 400 rol inválido), `IUserRepository.SearchAsync` + EF (filtro rol, query Email/FullName lowercase, orden CreatedAt desc). **Sin migración.** DI: `AdminUserService` + `AdminUserSearchCriteriaValidator` registrados en `Program.cs` (⚠️ se olvidó en el primer deploy → 500; corregido).
+  - **Frontend:** `lib/redirect.ts` (`readInternalRedirect` anti open-redirect + `DEFAULT_LOGIN_REDIRECT`); `/login` y `/registro` con `?redirect=` (aviso contextual, redirect propagado al link de registro); CTA "Inicia sesión para reservar" en `BookingEngine` cuando `requiresLogin` (banner + Link a `/login?redirect=/tutores/{id}&slot={slotId}`); retorno preselecciona el slot del query cuando el catálogo carga; **panel estudiante** `/estudiante/{reservas,monedero}` con layout + `StudentSubnav` (guard por rol, modal de cancelación con `noticeHoras`); `/mis-tutorias` → redirect; `/panel` Estudiante → `/estudiante/reservas`; `PanelMenu` Estudiante (2 items) y Admin (+ "Estudiantes"); **`/admin/estudiantes`** con `fetchAdminUsers` + `useAdminUsers` (debounce 300 ms, filtro rol, paginación); landing `Mentors` con `fetchTutors` real (client component, fetch en runtime, skeleton; "Ver Perfil" → Link al perfil; mock `MENTORS` archivado en `.ai/archive/`); nav: "Para Universidades" eliminado, Logo → `/`.
+  - **Tests:** 149/149 (5 nuevos `AdminUserServiceTests`). **Gates:** verdes (21 rutas). **Smoke E2E navegador verde:** catálogo sin login → perfil → slot → CTA con slot en redirect → login → retorno con slot preseleccionado → panel estudiante (reservas/monedero) → admin lista/filtra/busca estudiantes; curl: 401 sin token, 403 Admin al reservar, 201 Estudiante, cancelación PendingPayment sin crédito (correcto por diseño).
+  - **Nota:** admins de prueba del smoke eliminados de la BD; `admin.test@auralearn.dev` y `admin-smoke-2@test.dev` siguen pendientes de eliminar.
 
 ### En curso
 - Nada abierto a la fecha de este documento.
 
 ### Siguientes pasos
-1. Smoke E2E en navegador (UI real con polling) del flujo completo con usuarios reales.
-2. Firma digital SINPE real (cuando exista la API del banco; ADR-004 manual vigente).
-3. Testcontainers: test de carrera del débito y doble-booking contra Postgres real.
-4. Refresh tokens + rate limiting (deuda seguridad); ADR cookies httpOnly vs localStorage; Playwright E2E.
-5. Pizarra digital realtime; notificaciones email; upload de atestados con URLs firmadas; portal público `portal/`.
+1. Historial de movimientos del monedero (`GET /api/wallet/movements`) — fuera de alcance por decisión del usuario.
+2. Efecto real de `slotDurationMinutes` (ADR: granularidad de franjas + índice único `(tutor_id, start_at)` + UI de disponibilidad).
+3. P1 del análisis de gaps (`2026-10-11-tutor-portal-phase2/gaps-analysis.md`): canal de sesión, pizarra realtime, notificaciones email, vista de ganancias.
+
+---
+
+## Entrada anterior — Reglas de reserva del Admin (0.11.0)
+
+**Resumen:** tabla `booking_rules` (fila única, 4 reglas nullable + auditoría; seed 12/60/60/14), `GET /api/booking-rules` público + `PUT /api/admin/booking-rules` `[Admin]` (422 `BOOKING_RULES_INVALID_*`), página `/admin/configuracion` + `BookingRulesForm`; la lógica (cancelación, ventana de pago, horizonte ensure-ahead) se gobierna desde BD con fallback `BookingRulesDefaults`; `slotDurationMinutes` persistida sin efecto (deuda). Tests 144/144 (23 nuevos TDD). Detalle en `docs/plans/2026-10-12-booking-rules/` y `version-changes.md` v0.11.0.
+
+---
+
+## Entrada anterior — Foto de perfil + X en franjas (0.10.0)
+
+**Resumen:** `tutors.photo_path` (migración `AddTutorPhoto`), `IFileStorage.SavePhotoAsync` + `TutorPhotoService` (JPEG/PNG/WebP ≤5 MB), `POST me/photo` + `GET {id}/photo` público, `photoUrl` en DTOs, `ProfilePhotoCard` en `/tutor/perfil`, foto en perfil público y directorio, X en franjas de disponibilidad. Tests 121/121. Detalle en `docs/plans/2026-10-11-tutor-photo-ui/` y `version-changes.md` v0.10.0.
+
+---
+
+## Entrada anterior — Documentos del tutor + menú condicionado (0.8.0)
+
+**Resumen:** subida de documentos de verificación como paso del wizard (tabla `tutor_documents`, `IFileStorage`/`LocalFileStorage` disco local, gate 409 `MISSING_DOCUMENTS` al aprobar, cola admin con descarga protegida, "Conviértete en Tutor" oculto para Tutor/Admin). Detalle completo en `docs/plans/2026-10-11-tutor-documents/` y `version-changes.md` v0.8.0.
 
 ---
 
@@ -39,5 +53,5 @@ maxLines: 120
 
 | Fecha | Ámbito | Resumen |
 |-------|--------|---------|
-| 2026-09-29 | Full-stack | Slots/reservas + SINPE end-to-end (0.5.0) y panel admin de aprobación (0.4.2) |
-| 2026-09-28 | Full-stack | Onboarding tutor full-stack (0.4.0), auth backend TDD (0.3.0), auth UI, backend .NET (ADR-003) y conexión frontend (0.2.1) |
+| 2026-10-10 → 10-11 | Full-stack | Sección del tutor completa (0.7.0): fix rol (approve promueve a Tutor), perfil editable GET/PUT me/profile, especialización, /tutor/perfil + subnav |
+| 2026-09-27 → 2026-10-01 | Full-stack | Cierre de reservas (0.6.0), slots/reservas + SINPE (0.5.0), panel admin (0.4.2), onboarding tutor (0.4.0), auth TDD (0.3.0), auth UI, backend .NET (ADR-003), conexión frontend, gobernanza (ADR-001/002) |

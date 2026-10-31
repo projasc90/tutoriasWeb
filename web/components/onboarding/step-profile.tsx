@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/components/material-icon";
 
 export type ProfileData = {
   credentials: string;
+  specialization: string;
   university: string;
   bio: string;
 };
@@ -27,6 +28,7 @@ export function StepProfile({
   const validate = (): boolean => {
     const next: typeof errors = {};
     if (data.credentials.trim().length < 3) next.credentials = "Ingresa tu título o credencial.";
+    if (data.specialization.length > 100) next.specialization = "Máximo 100 caracteres.";
     if (!data.university) next.university = "Selecciona tu universidad.";
     if (data.bio.trim().length < 40) next.bio = "Cuéntanos un poco más (mínimo 40 caracteres).";
     setErrors(next);
@@ -62,6 +64,24 @@ export function StepProfile({
           value={data.credentials}
           onChange={(e) => setData((d) => ({ ...d, credentials: e.target.value }))}
           aria-invalid={!!errors.credentials}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field
+        label="Especialización (opcional)"
+        htmlFor="specialization"
+        error={errors.specialization}
+        hint="Énfasis o mención del título. Ej. Matemática Aplicada."
+      >
+        <input
+          id="specialization"
+          type="text"
+          placeholder="Ej. Matemática Aplicada"
+          maxLength={100}
+          value={data.specialization}
+          onChange={(e) => setData((d) => ({ ...d, specialization: e.target.value }))}
+          aria-invalid={!!errors.specialization}
           className={inputClass}
         />
       </Field>

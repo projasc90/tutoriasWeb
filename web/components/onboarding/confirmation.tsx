@@ -4,9 +4,16 @@ import { MaterialIcon } from "@/components/material-icon";
 export function Confirmation({
   fullName,
   email,
+  failedFileNames = null,
+  retrying = false,
+  onRetryDocuments,
 }: {
   fullName: string;
   email: string;
+  /** Archivos cuya subida falló (null = todo ok o sin documentos nuevos). */
+  failedFileNames?: string[] | null;
+  retrying?: boolean;
+  onRetryDocuments?: () => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-6 py-6 text-center">
@@ -44,7 +51,49 @@ export function Confirmation({
           body="Al aprobarse, tu perfil queda visible y reservable en el catálogo."
           state="todo"
         />
+        <TimelineItem
+          icon="edit_calendar"
+          title="Configura tus horarios"
+          body="Al aprobarse, define tus franjas semanales en el panel del tutor."
+          state="todo"
+        />
       </ol>
+
+      {failedFileNames && failedFileNames.length > 0 && (
+        <div
+          role="alert"
+          className="flex w-full max-w-md flex-col gap-3 rounded-xl border border-error/30 bg-error-container/20 p-4 text-left"
+        >
+          <p className="flex items-start gap-2 text-body-md text-on-error-container">
+            <MaterialIcon name="error" className="mt-0.5 shrink-0 text-[18px]" />
+            <span>
+              Tu postulación se envió, pero no pudimos subir:
+              <span className="font-semibold"> {failedFileNames.join(", ")}</span>. Puedes
+              reintentar ahora o subirlos luego desde tu postulación.
+            </span>
+          </p>
+          {onRetryDocuments && (
+            <button
+              type="button"
+              onClick={onRetryDocuments}
+              disabled={retrying}
+              className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-error/40 px-4 py-2 text-label-md font-semibold text-error transition-colors hover:bg-error-container/30 disabled:opacity-60"
+            >
+              {retrying ? (
+                <>
+                  <MaterialIcon name="progress_activity" className="animate-spin text-[16px]" />
+                  Reintentando…
+                </>
+              ) : (
+                <>
+                  <MaterialIcon name="refresh" className="text-[16px]" />
+                  Reintentar subida
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       <Link
         href="/"

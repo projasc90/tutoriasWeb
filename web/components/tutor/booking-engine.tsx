@@ -9,6 +9,7 @@
  * 5. Garantía + métodos de pago aceptados
  */
 
+import Link from "next/link";
 import { MaterialIcon } from "@/components/material-icon";
 import { formatCrc, formatHourEsCr } from "@/lib/time";
 import type { Slot } from "@/lib/api";
@@ -32,12 +33,17 @@ export function BookingEngine(props: {
   disabled: boolean;
   loading: boolean;
   onSubmit: () => void;
+  /** Sin sesión: la reserva exige login (backend devuelve 401). */
+  requiresLogin: boolean;
+  /** Ruta /login?redirect=... para retomar el flujo tras autenticar. */
+  loginHref: string | null;
 }) {
   const {
     slots, selectedSlotId, onSelectSlot,
     priceCrc, priceUsd,
     wallet, payWithWallet, onPayWithWalletChange,
     disabled, loading, onSubmit,
+    requiresLogin, loginHref,
   } = props;
 
   // Agrupa por día (key determinista YYYY-MM-DD en zona CR) + label es-CR
@@ -221,6 +227,23 @@ export function BookingEngine(props: {
           </p>
         </div>
 
+        {/* Aviso de login requerido (explorar es libre; reservar exige sesión) */}
+        {requiresLogin && loginHref && (
+          <div
+            role="status"
+            className="mt-4 flex items-start gap-2.5 rounded-xl bg-primary-fixed/40 p-3"
+          >
+            <MaterialIcon name="lock" className="shrink-0 text-[20px] text-primary" />
+            <div className="space-y-0.5">
+              <p className="text-label-md font-bold text-on-surface">Inicia sesión para reservar</p>
+              <p className="text-label-sm text-on-surface-variant">
+                Puedes explorar días y horarios sin cuenta; para confirmar tu reserva iniciamos sesión y
+                volvemos aquí con tu horario elegido.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Precio + CTA */}
         <div className="mt-4 space-y-2 pt-2">
           <div className="flex items-baseline justify-between">
@@ -243,15 +266,26 @@ export function BookingEngine(props: {
                 : `Saldo insuficiente (${formatCrc(wallet)})`}
             </label>
           )}
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={disabled || loading || (!payWithWallet && !selected)}
-            className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-title-md font-bold text-on-primary shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50"
-          >
-            <span>{loading ? "Creando reserva…" : payWithWallet ? "Reservar con mi saldo" : "Continuar al Pago / Checkout"}</span>
-            <MaterialIcon name="arrow_forward" className="text-[20px] transition-transform group-hover:translate-x-1" />
-          </button>
+          {requiresLogin && loginHref ? (
+            <Link
+              href={loginHref}
+              className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-title-md font-bold text-on-primary shadow-lg transition-all hover:scale-[1.01]"
+            >
+              <MaterialIcon name="login" className="text-[20px]" />
+              <span>Inicia sesión para reservar</span>
+              <MaterialIcon name="arrow_forward" className="text-[20px] transition-transform group-hover:translate-x-1" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={disabled || loading || (!payWithWallet && !selected)}
+              className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-title-md font-bold text-on-primary shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50"
+            >
+              <span>{loading ? "Creando reserva…" : payWithWallet ? "Reservar con mi saldo" : "Continuar al Pago / Checkout"}</span>
+              <MaterialIcon name="arrow_forward" className="text-[20px] transition-transform group-hover:translate-x-1" />
+            </button>
+          )}
         </div>
 
         {/* Garantía */}

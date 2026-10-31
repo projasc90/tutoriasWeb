@@ -55,18 +55,36 @@ public class SlotRepository : ISlotRepository
             .AsNoTracking()
             .ToListAsync(ct);
 
+        // 0b. Zona horaria y días de excepción por tutor
+        var tutorsData = await _db.Tutors
+            .Where(t => tutorIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.TimeZoneId })
+            .AsNoTracking()
+            .ToDictionaryAsync(t => t.Id, t => t.TimeZoneId, ct);
+        var exceptions = await _db.TutorAvailabilityExceptions
+            .Where(e => tutorIds.Contains(e.TutorId))
+            .AsNoTracking()
+            .ToListAsync(ct);
+        var exceptionsByTutor = exceptions
+            .GroupBy(e => e.TutorId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<TutorAvailabilityException>)g.ToList());
+
         // 1. Slots ya existentes en el rango (evita excepciones por índice único)
         var existing = await GetByTutorsInRangeAsync(tutorIds, fromUtc, toUtc, ct);
         var existingKeys = existing
             .Select(s => (s.TutorId, s.StartAt))
             .ToHashSet();
 
-        // 2. Generar candidatos (honoring de reglas; sin reglas → horario por defecto)
+        // 2. Generar candidatos (honoring de reglas, zona y excepciones; sin reglas → horario por defecto)
         var missing = tutorIds
             .SelectMany(tutorId => SlotGenerationService.GenerateSlots(
                 tutorId, fromUtc, toUtc,
                 rules.Count > 0
                     ? rules.Where(r => r.TutorId == tutorId).ToList()
+                    : null,
+                timeZoneId: tutorsData.TryGetValue(tutorId, out var tz) ? tz : null,
+                excepciones: exceptionsByTutor.TryGetValue(tutorId, out var ex)
+                    ? ex
                     : null))
             .Where(candidate => !existingKeys.Contains((candidate.TutorId, candidate.StartAt)))
             .ToList();
@@ -74,6 +92,7 @@ public class SlotRepository : ISlotRepository
         // 2b. Purga de honorabilidad: si el tutor tiene reglas, los slots existentes
         // FUERA de sus franjas (y sin reserva activa) dejan de existir. Con reserva
         // activa se conservan: la sesión ya está comprometida con el estudiante.
+        // Con el horario semanal deshabilitado, TODOS los slots sin reserva se purgan.
         if (rules.Count > 0)
         {
             var rulesByTutor = rules
@@ -86,11 +105,22 @@ public class SlotRepository : ISlotRepository
                 if (!rulesByTutor.TryGetValue(slot.TutorId, out var franjas))
                     continue;
 
-                var localCr = TimeZoneInfo.ConvertTimeFromUtc(slot.StartAt, CostaRicaZone);
-                var weekday = (int)localCr.DayOfWeek;
-                var localTime = TimeOnly.FromDateTime(localCr);
-                var dentro = franjas.Any(f =>
+                var zone = SlotGenerationService.ResolveZone(
+                    tutorsData.TryGetValue(slot.TutorId, out var tz) ? tz : null);
+                var localTz = TimeZoneInfo.ConvertTimeFromUtc(slot.StartAt, zone);
+                var weekday = (int)localTz.DayOfWeek;
+                var localTime = TimeOnly.FromDateTime(localTz);
+                var slotDate = DateOnly.FromDateTime(localTz);
+
+                // Horario deshabilitado o fecha de excepción → todo el día es stale
+                var weeklyOff = franjas.All(f => !f.WeeklyEnabled);
+                var esExcepcion = exceptionsByTutor.TryGetValue(slot.TutorId, out var exs)
+                    && exs.Any(e => e.Date == slotDate);
+
+                var dentro = !weeklyOff && !esExcepcion && franjas.Any(f =>
+                    f.WeeklyEnabled &&
                     f.Weekday == weekday &&
+                    (f.IsRecurring || f.AnchorDate == slotDate) &&
                     localTime >= f.StartLocal &&
                     localTime.AddHours(1) <= f.EndLocal);
 

@@ -19,6 +19,9 @@ public class Tutor
     /// <summary>Título o credencial académica (ej. "PhD Matemáticas").</summary>
     public required string Credentials { get; set; }
 
+    /// <summary>Especialización o énfasis del título (opcional; ej. "Matemática Aplicada").</summary>
+    public string? Specialization { get; set; }
+
     /// <summary>Institución de procedencia (UCR, TEC, UNA, LEAD, ...).</summary>
     public required string University { get; set; }
 
@@ -45,6 +48,18 @@ public class Tutor
 
     /// <summary>Motivo del rechazo (auditoría funcional; null si no aplica).</summary>
     public string? RejectionReason { get; set; }
+
+    /// <summary>
+    /// Ruta de storage relativa de la foto de perfil (pública, no es documento
+    /// de verificación). Null = sin foto (el frontend muestra iniciales).
+    /// </summary>
+    public string? PhotoPath { get; set; }
+
+    /// <summary>
+    /// Zona horaria IANA en la que el tutor define sus franjas (los alumnos ven
+    /// las horas convertidas a la suya). Default: horario de negocio CR.
+    /// </summary>
+    public string TimeZoneId { get; set; } = "America/Costa_Rica";
 
     public DateTime CreatedAt { get; set; }
 }

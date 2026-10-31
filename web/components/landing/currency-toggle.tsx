@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
@@ -10,13 +11,25 @@ const NAV_ITEMS = [
   { label: "Buscar Tutores", href: "#catalogo" },
   { label: "Cómo Funciona", href: "#como-funciona" },
   { label: "Materias Populares", href: "#disciplinas" },
-  { label: "Para Universidades", href: "#" },
   { label: "Conviértete en Tutor", href: "/postular" },
 ];
+
+/**
+ * Filtra el CTA de postulación para quienes ya no son audiencia del wizard:
+ * tutores y admins logueados (el rol viene de la sesión, no del JWT crudo).
+ */
+function visibleNavItems(role: string | null) {
+  if (role === "Tutor" || role === "Admin") {
+    return NAV_ITEMS.filter((item) => item.href !== "/postular");
+  }
+  return NAV_ITEMS;
+}
 
 export function SiteHeader() {
   const { state, logout } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
+  const role = state.status === "authenticated" ? state.session.role : null;
+  const navItems = visibleNavItems(role);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant/60 bg-background/80 backdrop-blur-md">
@@ -26,7 +39,7 @@ export function SiteHeader() {
           aria-label="Navegación principal"
           className="hidden items-center gap-6 xl:flex"
         >
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <a
               key={item.label}
               href={item.href}
@@ -71,7 +84,7 @@ export function SiteHeader() {
 
 function Logo() {
   return (
-    <a href="#" className="flex items-center gap-2.5">
+    <Link href="/" className="flex items-center gap-2.5">
       <span
         aria-hidden
         className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary to-primary-container text-on-primary text-lg font-extrabold leading-none"
@@ -81,7 +94,7 @@ function Logo() {
       <span className="text-headline-sm font-bold tracking-tight text-primary">
         AuraLearn
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -120,14 +133,19 @@ function PanelMenu({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       ? [
           { label: "Cola de pagos", href: "/admin/pagos", icon: "payments" },
           { label: "Aprobación de tutores", href: "/admin/tutores", icon: "verified" },
+          { label: "Estudiantes", href: "/admin/estudiantes", icon: "groups" },
+          { label: "Reglas de reserva", href: "/admin/configuracion", icon: "tune" },
         ]
       : role === "Tutor"
         ? [
+            { label: "Mi perfil de tutor", href: "/tutor/perfil", icon: "badge" },
             { label: "Mis sesiones", href: "/tutor/sesiones", icon: "school" },
             { label: "Gestor de disponibilidad", href: "/tutor/disponibilidad", icon: "edit_calendar" },
+            { label: "Mis documentos", href: "/tutor/documentos", icon: "folder_open" },
           ]
         : [
-            { label: "Mis tutorías y monedero", href: "/mis-tutorias", icon: "event_available" },
+            { label: "Mis reservas", href: "/estudiante/reservas", icon: "event_available" },
+            { label: "Mi monedero", href: "/estudiante/monedero", icon: "account_balance_wallet" },
           ];
 
   return (

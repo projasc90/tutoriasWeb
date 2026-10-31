@@ -8,8 +8,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SiteHeader } from "@/components/landing/currency-toggle";
 import { MaterialIcon } from "@/components/material-icon";
+import { TutorPageHeader, HeaderMetric } from "@/components/tutor/tutor-page-header";
 import { useAuth } from "@/hooks/use-auth";
 import { useTutorSessions } from "@/hooks/use-tutor-sessions";
 import { completeSession, fetchWallet } from "@/lib/api";
@@ -43,14 +43,11 @@ export default function TutorSessionsPage() {
 
   if (authState.status === "loading" || authState.status === "anonymous") {
     return (
-      <>
-        <SiteHeader />
-        <main className="flex flex-1 flex-col bg-background min-h-screen">
-          <div className="mx-auto max-w-4xl px-6 py-12">
-            <p className="text-body-lg text-on-surface-variant">Cargando…</p>
-          </div>
-        </main>
-      </>
+      <main className="flex flex-1 flex-col bg-background min-h-screen">
+        <div className="mx-auto max-w-4xl px-6 py-12">
+          <p className="text-body-lg text-on-surface-variant">Cargando…</p>
+        </div>
+      </main>
     );
   }
 
@@ -67,26 +64,18 @@ export default function TutorSessionsPage() {
   };
 
   return (
-    <>
-      <SiteHeader />
-      <main className="flex flex-1 flex-col bg-background min-h-screen">
-        <section className="bg-surface-container-low border-b border-outline-variant/40">
-          <div className="mx-auto max-w-4xl px-6 py-10 lg:px-12">
-            <h1 className="text-headline-lg font-bold text-on-surface">Mis sesiones</h1>
-            <p className="mt-1 text-body-md text-on-surface-variant">
-              Cierra tus sesiones confirmadas una vez concluidas: el pago se liquida a tu monedero.
-            </p>
-            <div className="mt-6 inline-flex items-center gap-3 rounded-xl bg-surface-container-lowest px-4 py-3 shadow-sm">
-              <MaterialIcon name="account_balance_wallet" className="text-[24px] text-primary" />
-              <div>
-                <p className="text-label-md text-on-surface-variant">Monedero</p>
-                <p className="text-title-md font-bold text-on-surface">
-                  {wallet !== null ? formatCrc(wallet) : "—"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+    <main className="flex flex-1 flex-col bg-background min-h-screen">
+        <TutorPageHeader
+          title="Mis sesiones"
+          description="Cierra tus sesiones confirmadas una vez concluidas: el pago se liquida a tu monedero."
+          aside={
+            <HeaderMetric
+              icon="account_balance_wallet"
+              label="Monedero"
+              value={wallet !== null ? formatCrc(wallet) : "—"}
+            />
+          }
+        />
 
         <section className="mx-auto max-w-4xl px-6 py-10 lg:px-12">
           {state.status === "loading" ? (
@@ -157,7 +146,6 @@ export default function TutorSessionsPage() {
           ) : null}
         </section>
       </main>
-    </>
   );
 }
 

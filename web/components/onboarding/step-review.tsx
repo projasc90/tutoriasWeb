@@ -5,12 +5,15 @@ import { MaterialIcon } from "@/components/material-icon";
 import type { AccountData } from "./step-account";
 import type { ProfileData } from "./step-profile";
 import type { SubjectsData } from "./step-subjects";
+import type { DocumentsData } from "./step-documents";
 
 export function StepReview({
   account,
   profile,
   subjects,
+  documents,
   submitting,
+  uploadProgress,
   serverError,
   onBack,
   onSubmit,
@@ -18,13 +21,16 @@ export function StepReview({
   account: AccountData;
   profile: ProfileData;
   subjects: SubjectsData;
+  documents: DocumentsData;
   submitting: boolean;
+  uploadProgress: { done: number; total: number } | null;
   serverError: string | null;
   onBack: () => void;
   onSubmit: () => void;
 }) {
   const [accepted, setAccepted] = useState(false);
   const priceUsd = subjects.priceCrc > 0 ? Math.round(subjects.priceCrc / 520) : 0;
+  const busy = submitting || uploadProgress !== null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,6 +45,9 @@ export function StepReview({
         <Row label="Nombre" value={account.fullName} />
         <Row label="Correo" value={account.email} />
         <Row label="Título" value={profile.credentials} />
+        {profile.specialization ? (
+          <Row label="Especialización" value={profile.specialization} />
+        ) : null}
         <Row label="Universidad" value={profile.university} />
         <div className="flex flex-col gap-1">
           <dt className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -59,6 +68,19 @@ export function StepReview({
           label="Tarifa"
           value={`₡${subjects.priceCrc.toLocaleString("es-CR")} / hora${priceUsd > 0 ? ` (≈ $${priceUsd})` : ""}`}
         />
+        <div className="flex flex-col gap-1">
+          <dt className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+            Documentos
+          </dt>
+          <dd className="flex flex-col gap-1">
+            {documentSummary(documents).map((line) => (
+              <span key={line} className="flex items-center gap-1.5 text-body-md text-on-surface">
+                <MaterialIcon name="description" className="text-[16px] text-primary" />
+                {line}
+              </span>
+            ))}
+          </dd>
+        </div>
         <div className="flex flex-col gap-1">
           <dt className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
             Sobre ti
@@ -94,7 +116,7 @@ export function StepReview({
         <button
           type="button"
           onClick={onBack}
-          disabled={submitting}
+          disabled={busy}
           className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-title-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface disabled:opacity-60"
         >
           <MaterialIcon name="arrow_back" className="text-[18px]" />
@@ -103,10 +125,17 @@ export function StepReview({
         <button
           type="button"
           onClick={onSubmit}
-          disabled={!accepted || submitting}
+          disabled={!accepted || busy}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-title-md font-semibold text-on-primary shadow-sm transition-colors hover:bg-on-primary-fixed-variant disabled:opacity-60"
         >
-          {submitting ? (
+          {uploadProgress ? (
+            <>
+              <MaterialIcon name="progress_activity" className="animate-spin text-[18px]" />
+              <span>
+                Subiendo documentos ({uploadProgress.done}/{uploadProgress.total})…
+              </span>
+            </>
+          ) : submitting ? (
             <>
               <MaterialIcon name="progress_activity" className="animate-spin text-[18px]" />
               <span>Enviando postulación…</span>
@@ -121,6 +150,26 @@ export function StepReview({
       </div>
     </div>
   );
+}
+
+/** Resumen legible de los documentos que se enviarán (locales + ya subidos). */
+function documentSummary(documents: DocumentsData): string[] {
+  const lines: string[] = [];
+  const titulos = [
+    ...documents.existing.filter((d) => d.kind === "Titulo").map((d) => d.fileName),
+    ...documents.titulos.map((f) => f.name),
+  ];
+  if (titulos.length > 0) lines.push(`Títulos: ${titulos.join(", ")}`);
+  const certs = [
+    ...documents.existing.filter((d) => d.kind === "Certificacion").map((d) => d.fileName),
+    ...documents.certificaciones.map((f) => f.name),
+  ];
+  if (certs.length > 0) lines.push(`Certificaciones: ${certs.join(", ")}`);
+  const ident =
+    documents.identificacion?.name ??
+    documents.existing.find((d) => d.kind === "Identificacion")?.fileName;
+  if (ident) lines.push(`Identificación: ${ident}`);
+  return lines;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

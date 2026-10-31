@@ -20,10 +20,10 @@ tutoriasWeb/  (monorepo raíz)
 │
 ├── api/                    # ⚙️ Backend .NET 10 — ACTIVO (ADR-003, 2026-09-28)
 │   ├── AuraLearn.sln       #    Solución: Api → Application → Domain
-│   ├── AuraLearn.Api/      #    Program.cs (DI/JWT/CORS/health), Controllers/, appsettings.json
-│   ├── AuraLearn.Application/  # Dto/, Interfaces/ (puertos), Services/ + FluentValidation
-│   ├── AuraLearn.Domain/   #    Entities/Tutor.cs, Enums/{Role,VerificationStatus}.cs
-│   ├── AuraLearn.Infrastructure/  # Persistence/ (DbContext Npgsql, TutorRepository), Migrations/
+│   ├── AuraLearn.Api/      #    Program.cs (DI/JWT/CORS/storage), Controllers/, appsettings.json
+│   ├── AuraLearn.Application/  # Dto/, Interfaces/ (puertos: repos + IFileStorage), Services/ + FluentValidation
+│   ├── AuraLearn.Domain/   #    Entities/{Tutor,TutorDocument}.cs, Enums/{Role,VerificationStatus,TutorDocumentKind}.cs
+│   ├── AuraLearn.Infrastructure/  # Persistence/ (DbContext Npgsql, repos, LocalFileStorage), Migrations/
     │   └── tests/AuraLearn.Tests/     # xUnit + NSubstitute (AuthService, TutorApplicationService, validadores)
 │
 ├── portal/                 # 🌐 Portal público — RESERVADA (.gitkeep)
@@ -48,6 +48,9 @@ tutoriasWeb/  (monorepo raíz)
     │   ├── mis-tutorias/page.tsx  # Panel estudiante: reservas, monedero, cancelar/reprogramar
     │   ├── tutor/sesiones/page.tsx       # Panel tutor: completar sesiones (liquidación)
     │   ├── tutor/disponibilidad/page.tsx # Editor de franjas semanales (PUT)
+    │   ├── tutor/layout.tsx      # Layout /tutor/*: SiteHeader + TutorSubnav (Perfil·Disponibilidad·Sesiones)
+    │   ├── tutor/page.tsx        # Índice /tutor → redirect a /tutor/perfil
+    │   ├── tutor/perfil/page.tsx # Mi perfil de tutor: datos de alta + estado de verificación
     │   ├── admin/pagos/page.tsx   # Cola de comprobantes (aprobar/rechazar)
     │   ├── admin/tutores/page.tsx # Cola de postulaciones (aprobar/rechazar)
     │   ├── postular/page.tsx# Onboarding del profesor (server) — propuesta de valor + wizard client
@@ -57,26 +60,42 @@ tutoriasWeb/  (monorepo raíz)
     │   │                   # mentors (mock MENTORS), steps, testimonials, tutor-cta,
     │   │                   # faq, final-cta, footer, currency-toggle (SiteHeader),
     │   │                   # section-eyebrow (eyebrow/título/subtítulo reutilizables)
-    │   └── onboarding/      # Wizard /postular: onboarding-wizard (orquestador), step-account,
-    │                       # step-profile, step-subjects, step-review, confirmation, shared (Stepper/Field)
+    │   └── onboarding/      # Wizard /postular (5 pasos): onboarding-wizard (orquestador + submit
+    │                       # JSON + uploads + reintento), step-account, step-profile, step-subjects,
+    │                       # step-documents (subida título/certificaciones/identificación),
+    │                       # step-review, confirmation, shared (Stepper/Field/inputClass)
     │   └── ui/             # Primitivas shadcn base-nova sobre @base-ui/react:
     │                       # accordion, avatar, badge, button, card, input,
     │                       # navigation-menu, separator, sheet
+    │   ├── tutor/profile/profile-photo-card.tsx # Foto de perfil (preview + reemplazar)
+    │   ├── tutor/documents/ # DocumentsManager (/tutor/documentos): agregar títulos/certs,
+    │   │                   # ID con candado si Verified, contadores n/5
+    │   └── tutor/profile/   # Panel perfil tutor: tutor-subnav (tabs /tutor/*),
+    │                       # profile-form (alta editable + barra sticky),
+    │                       # profile-status-card (estado de verificación)
     ├── lib/
     │   ├── utils.ts        # Reexporta cn del paquete "cn"
+    │   ├── subjects.ts     # normalizeSubject + suggestSubjectCorrection (espejo del backend)
+    │   ├── documents.ts    # Validación de documentos compartida (wizard + portal)
     │   ├── api.ts          # Cliente HTTP tipado (fetchTutors, registerUser, loginUser,
-    │   │                   # submitTutorApplication, fetchTutorApplicationStatus) — espejo de los DTOs
+    │   │                   # submitTutorApplication, fetchTutorApplicationStatus,
+    │   │                   # fetchTutorProfile, updateTutorProfile, uploadTutorDocument,
+    │   │                   # fetchTutorDocuments, fetchTutorDocumentBlobUrl) — espejo de los DTOs
     │   ├── auth.ts         # Sesión mínima del wizard (token JWT en localStorage) — no usar fuera de /postular
     │   ├── filters.ts      # applySort — orden client-side (el filtrado es server-side)
     │   ├── types/          # Tipos de dominio (Tutor, FilterState, SortOption, Mentor)
     │   │   ├── tutor.ts    #   espejo del DTO del backend .NET
-    │   │   ├── tutor-application.ts # espejo de TutorApplicationDto.cs (postulación)
+    │   │   ├── tutor-application.ts # espejo de TutorApplicationDto.cs (postulación + documentos)
+    │   │   ├── tutor-profile.ts     # espejo de TutorProfileDto.cs (perfil editable)
     │   │   └── mentor.ts   #   tipos de los mentores destacados de la landing
     │   ├── data/           # Constantes de filtro de la UI (los datos vienen de la API)
     │   │   ├── tutors.ts   #   UNIVERSITIES, LEVELS, AVAILABILITIES, RATINGS, DEFAULT_FILTERS
     │   │   └── mentors.ts  #   MENTORS de la landing (marketing estático)
     ├── hooks/
     │   ├── use-tutors.ts   # Hook de datos del directorio (estados, AbortController, debounce)
+    │   ├── use-tutor-documents.ts # Subida de documentos de verificación (uploads secuenciales + fallos)
+    │   ├── use-tutor-profile.ts # Perfil del tutor autenticado (GET/PUT me/profile + save)
+    │   ├── use-tutor-profile.ts # Perfil del tutor autenticado (GET/PUT me/profile + save)
     │   └── use-tutor-application.ts # Hook de mutación de la postulación (idle/submitting/error/success)
     └── public/             # Assets estáticos
 ```
@@ -89,9 +108,9 @@ tutoriasWeb/  (monorepo raíz)
 | `web/components/landing/` | Secciones de marketing y catálogo visual | Validaciones de negocio |
 | `web/components/ui/` | Primitivas de UI reutilizables | Conocimiento del dominio |
 | `web/components/material-icon.tsx` | Iconografía Material Symbols + carga de fuentes | — |
-| `api/AuraLearn.Api` | HTTP surface: TutorsController (catálogo + GET por id), AuthController, TutorApplicationsController (postulación), AdminTutorApplicationsController (decisión, rol Admin), SlotsController (ensure-ahead), ReservationsController (crear/comprobante/cancelar/complete/tutor-sessions), AdminPaymentsController (cola, rol Admin), AvailabilityController (reglas del tutor, rol Tutor), WalletController, JWT bearer, CORS, healthcheck | Reglas de negocio, acceso a datos |
-| `api/AuraLearn.Application` | Casos de uso (TutorService, AuthService, TutorApplicationService, ReservationService, SlotAvailabilityService, AvailabilityService, SlotQueryService, SlotGenerationService, SinpeComprobanteValidator), DTOs, validación (FluentValidation), puertos | Detalles de persistencia |
-| `api/AuraLearn.Domain` | Entidades (Tutor, User, Slot, Reservation, WalletEntry, TutorAvailability), enums, ReservationStateMachine | Dependencias externas (EF, HTTP) |
+| `api/AuraLearn.Api` | HTTP surface: TutorsController (catálogo + GET por id), AuthController, TutorApplicationsController (postulación), TutorProfileController (GET/PUT me/profile del tutor autenticado), AdminTutorApplicationsController (decisión, rol Admin), SlotsController (ensure-ahead con horizonte de booking_rules), ReservationsController (crear/comprobante/cancelar/complete/tutor-sessions), AdminPaymentsController (cola, rol Admin), AvailabilityController (reglas del tutor, rol Tutor), BookingRulesController (GET público + PUT admin/booking-rules, rol Admin), TutorDocumentsController (POST/GET me/documents multipart; Verified agrega títulos/certs, ID 409 IDENTIFICATION_LOCKED), AdminTutorDocumentsController (descarga, rol Admin), TutorPhotosController (POST me/photo + GET {id}/photo público), WalletController, JWT bearer, CORS, healthcheck | Reglas de negocio, acceso a datos |
+| `api/AuraLearn.Application` | Casos de uso (TutorService, AuthService, TutorApplicationService — promueve rol a Tutor al aprobar, TutorProfileService, ReservationService — cancelación/ventana de pago desde booking_rules, SlotAvailabilityService, AvailabilityService, BookingRulesService + UpdateBookingRulesValidator, SlotQueryService, SlotGenerationService, SinpeComprobanteValidator, TutorDocumentService — gate de documentos en DecideAsync, SubjectNormalizer, TutorPhotoService), DTOs, validación (FluentValidation), puertos (repos + IFileStorage + IBookingRulesRepository) | Detalles de persistencia |
+| `api/AuraLearn.Domain` | Entidades (Tutor, User, Slot, Reservation, WalletEntry, TutorAvailability, TutorAvailabilityException, TutorDocument, BookingRules — fila única de reglas de reserva), enums, ReservationStateMachine | Dependencias externas (EF, HTTP) |
 | `api/AuraLearn.Infrastructure` | EF Core (DbContext, repositorios), migraciones | Lógica de caso de uso |
 | `api/tests/AuraLearn.Tests` | Unit tests de Application/Domain | — |
 | `design/stitch/` | Referencia visual exportada | Código productivo (no copiar tal cual) |

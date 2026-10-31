@@ -1,0 +1,49 @@
+# CI — Frontend AuraLearn (web/): gate de calidad en cada PR.
+#
+# El deploy a Vercel se hace con la integración Git nativa de Vercel
+# (Settings → Git → conectar repo): preview en cada PR y producción en
+# merge a main, sin tokens en Actions. Este workflow solo valida.
+#
+# Variables de Vercel (Project → Settings → Environment Variables):
+#  - NEXT_PUBLIC_API_URL = https://<api>.up.railway.app
+
+name: web-ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
+      - name: Type-check
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: web
+        run: npm run build

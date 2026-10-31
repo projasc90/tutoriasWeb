@@ -20,7 +20,7 @@ export function DayColumn(props: {
   busySlotsByHour: Map<string, string[]>; // "weekday|hour" → alumnos (decorativo)
   onAdd: (weekday: number) => void;
   onRemove: (localId: string) => void;
-  onChange: (localId: string, field: "startLocal" | "endLocal", value: string) => void;
+  onChange: (localId: string, field: "startLocal" | "endLocal" | "isRecurring", value: string | boolean) => void;
   onCopyDay: (weekday: number) => void;
 }) {
   const {
@@ -41,19 +41,19 @@ export function DayColumn(props: {
       }`}
     >
       <div>
-        <div className="mb-3 flex items-center justify-between pb-3">
-          <div>
-            <span className={`block text-headline-sm ${activo ? "text-on-surface" : "text-on-surface-variant"}`}>
+        <div className="mb-3 flex items-center justify-between gap-2 pb-3">
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <span className={`block text-title-md font-bold ${activo ? "text-on-surface" : "text-on-surface-variant"}`}>
               {name}
             </span>
-            <span className={`text-label-sm font-bold ${activo ? "text-primary" : "text-outline"}`}>
-              {activo ? `${cupsLibres} cupos libres` : "Sin actividad"}
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm ${activo ? "bg-surface-container-high text-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
+              {activo ? "Activo" : "Cerrado"}
             </span>
           </div>
-          <span className={`rounded-full px-2 py-0.5 text-label-sm ${activo ? "bg-surface-container-high text-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
-            {activo ? "Activo" : "Cerrado"}
-          </span>
         </div>
+        {activo && cupsLibres > 0 && (
+          <p className="-mt-2 mb-2 text-label-sm text-primary">{cupsLibres} cupos libres esta semana</p>
+        )}
 
         {!activo ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -69,38 +69,47 @@ export function DayColumn(props: {
               const open = slotsOpenByRule.get(r.localId) ?? 0;
               const busy = busySlotsByHour.get(`${weekday}`) ?? [];
               return (
-                <div key={r.localId} className="group relative rounded-lg bg-surface-container-low p-2.5">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-on-surface">
-                      <HoraInput
-                        value={r.startLocal}
-                        label={`Inicio ${name}`}
-                        onChange={(v) => onChange(r.localId, "startLocal", v)}
-                      />
-                      {" - "}
-                      <HoraInput
-                        value={r.endLocal}
-                        label={`Fin ${name}`}
-                        onChange={(v) => onChange(r.localId, "endLocal", v)}
-                      />
-                    </span>
-                    <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => onRemove(r.localId)}
-                        className="p-0.5 text-on-surface-variant hover:text-error"
-                        aria-label={`Eliminar franja ${name}`}
-                      >
-                        <MaterialIcon name="delete" className="text-[16px]" />
-                      </button>
-                    </div>
+                <div key={r.localId} className="group relative rounded-lg bg-surface-container-low p-2.5 pr-6">
+                  {/* X de eliminación en la esquina superior derecha de la franja.
+                      fontSize inline: la clase .material-symbols-outlined de Google
+                      fija 24px y gana el cascade sobre las utilidades de Tailwind. */}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(r.localId)}
+                    className="absolute right-1 top-1 grid h-3.5 w-3.5 place-items-center rounded-full text-on-surface-variant transition-colors hover:bg-error-container/30 hover:text-error"
+                    aria-label={`Eliminar franja ${name}`}
+                  >
+                    <MaterialIcon name="close" style={{ fontSize: 11 }} />
+                  </button>
+                  {/* Horario a lo ancho del cuadro: inicio – fin en una sola línea */}
+                  <div className="flex items-center gap-0.5">
+                    <HoraInput
+                      value={r.startLocal}
+                      label={`Inicio ${name}`}
+                      onChange={(v) => onChange(r.localId, "startLocal", v)}
+                    />
+                    <span aria-hidden className="shrink-0 text-[12px] text-on-surface-variant">–</span>
+                    <HoraInput
+                      value={r.endLocal}
+                      label={`Fin ${name}`}
+                      onChange={(v) => onChange(r.localId, "endLocal", v)}
+                    />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 rounded bg-surface-variant px-1.5 py-0.5 text-label-sm text-on-primary-fixed-variant">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded bg-surface-variant px-1.5 py-0.5 text-label-sm text-on-primary-fixed-variant">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                       {open} cupos abiertos
                     </span>
-                    <span className="text-label-sm text-on-surface-variant">Recurrente</span>
+                    {/* Toggle recurrente: semanal vs solo la próxima ocurrencia */}
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-label-sm text-on-surface-variant">
+                      <input
+                        type="checkbox"
+                        checked={r.isRecurring}
+                        onChange={(e) => onChange(r.localId, "isRecurring", e.target.checked)}
+                        className="h-3.5 w-3.5 accent-primary"
+                      />
+                      {r.isRecurring ? "Recurrente" : "Solo próxima vez"}
+                    </label>
                   </div>
                   {busy.length > 0 && (
                     <div className="mt-1.5 space-y-1">
@@ -159,8 +168,7 @@ function HoraInput(props: { value: string; label: string; onChange: (v: string) 
       aria-label={props.label}
       value={props.value}
       onChange={(e) => props.onChange(e.target.value.slice(0, 5))}
-      className="rounded bg-transparent px-1 font-numeric text-numeric-table text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-      style={{ width: "4.6rem", display: "inline-block" }}
+      className="min-w-0 flex-1 rounded bg-transparent text-left font-numeric text-[12px] leading-none text-on-surface focus:outline-none focus:ring-1 focus:ring-primary [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-datetime-edit]:w-full [&::-webkit-datetime-edit]:px-0 [&::-webkit-datetime-edit-fields-wrapper]:gap-0"
     />
   );
 }

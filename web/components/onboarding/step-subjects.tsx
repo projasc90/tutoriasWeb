@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Field, inputClass } from "./shared";
 import { MaterialIcon } from "@/components/material-icon";
+import { normalizeSubject, suggestSubjectCorrection } from "@/lib/subjects";
 
 export type SubjectsData = {
   subjects: string[];
@@ -31,7 +32,7 @@ export function StepSubjects({
   const [errors, setErrors] = useState<{ subjects?: string; price?: string }>({});
 
   const addSubject = (value: string) => {
-    const v = value.trim();
+    const v = normalizeSubject(value);
     if (!v) return;
     if (subjects.length >= MAX_SUBJECTS) return;
     if (subjects.some((s) => s.toLowerCase() === v.toLowerCase())) return;
@@ -97,6 +98,24 @@ export function StepSubjects({
               className={`${inputClass} pl-10`}
             />
           </div>
+
+          {(() => {
+            const suggestion = suggestSubjectCorrection(draft, SUGGESTED);
+            return suggestion ? (
+              <p className="flex flex-wrap items-center gap-2 text-label-md text-on-surface-variant">
+                ¿Quisiste decir
+                <span className="font-semibold text-primary">{suggestion}</span>?
+                <button
+                  type="button"
+                  onClick={() => addSubject(suggestion)}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/40 px-2.5 py-0.5 font-semibold text-primary transition-colors hover:bg-primary-container/20"
+                >
+                  <MaterialIcon name="auto_fix_high" className="text-[14px]" />
+                  Usar
+                </button>
+              </p>
+            ) : null;
+          })()}
 
           {subjects.length > 0 && (
             <ul className="flex flex-wrap gap-2" aria-label="Materias seleccionadas">

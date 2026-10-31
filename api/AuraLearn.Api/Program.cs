@@ -24,14 +24,31 @@ builder.Services.AddScoped<ISlotRepository, SlotRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<ITutorAvailabilityRepository, TutorAvailabilityRepository>();
+builder.Services.AddScoped<ITutorAvailabilityExceptionRepository, TutorAvailabilityExceptionRepository>();
+builder.Services.AddScoped<ITutorDocumentRepository, TutorDocumentRepository>();
+builder.Services.AddScoped<IBookingRulesRepository, BookingRulesRepository>();
+
+// Storage de documentos en disco local (fuera del repo). Override en prod con
+// la clave Storage:DocumentsRoot (p. ej. /var/lib/auralearn/uploads/documents).
+builder.Services.AddSingleton<IFileStorage>(_ => new LocalFileStorage(
+    builder.Configuration["Storage:DocumentsRoot"]
+    ?? Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".auralearn", "uploads", "documents")));
 
 // SlotGenerationService es estático; el resto de servicios van scoped
 builder.Services.AddScoped<SinpeComprobanteValidator>();
 builder.Services.AddScoped<ReservationService>();
 builder.Services.AddScoped<SlotAvailabilityService>();
 builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<BookingRulesService>();
 
 builder.Services.AddScoped<TutorService>();
+builder.Services.AddScoped<TutorProfileService>();
+builder.Services.AddScoped<TutorDocumentService>();
+builder.Services.AddScoped<TutorPhotoService>();
+builder.Services.AddScoped<AdminUserService>();
+builder.Services.AddScoped<AdminUserSearchCriteriaValidator>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<TutorSearchCriteriaValidator>();
 
@@ -70,9 +87,18 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-// ── CORS (frontend local) ──────────────────────────────────────────
+// ── CORS (frontend local + dominios de prod por variable de entorno) ──
+// Cors__Origins = orígenes separados por ';' (p. ej. https://app.vercel.app;https://auralearn.com).
+// En Development el default es el frontend local.
+var corsOrigins = (builder.Configuration["Cors:Origins"]
+        ?? (builder.Environment.IsDevelopment() ? "http://localhost:3000" : string.Empty))
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
+{
+    if (corsOrigins.Length > 0)
+        policy.WithOrigins(corsOrigins);
+    policy.AllowAnyHeader().AllowAnyMethod();
+}));
 
 // ── API surface ────────────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -95,5 +121,27 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// ── Migraciones al desplegar (opt-in explícito) ────────────────────
+// APPLY_MIGRATIONS=true en el arranque del contenedor aplica las migraciones
+// pendientes y termina (modo one-shot para el deploy). En local se usa
+// `dotnet ef database update` (ver .ai/PROTOCOLS.md); nunca automático silencioso.
+if (builder.Configuration["ApplyMigrations"] == "true")
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AuraLearnDbContext>();
+    db.Database.Migrate();
+    Console.WriteLine("[auralearn] Migraciones aplicadas.");
+    return;
+}
+
+// ── Puerto dinámico (Railway/contenedores inyectan PORT) ───────────
+// En local sigue funcionando con launchSettings (5037); en contenedor
+// ASPNETCORE_URLS del Dockerfile fija http://0.0.0.0:$PORT.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port) && !app.Environment.IsDevelopment())
+{
+    app.Urls.Add($"http://0.0.0.0:{port}");
+}
 
 app.Run();

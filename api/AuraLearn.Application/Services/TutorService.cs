@@ -23,11 +23,14 @@ public class TutorSearchCriteriaValidator : AbstractValidator<TutorSearchCriteri
 /// Caso de uso: búsqueda del catálogo de tutores. Solo expone tutores
 /// <c>Verified</c> (regla de negocio: el catálogo público nunca muestra
 /// tutores sin verificar). Reemplaza el array DemoSlots por slots reales.
+/// El horizonte de generación ensure-ahead usa la ventana máxima definida por
+/// el Admin (default 14 días).
 /// </summary>
 public class TutorService(
     ITutorRepository repository,
     ISlotRepository slotRepository,
-    SlotAvailabilityService slotAvailability)
+    SlotAvailabilityService slotAvailability,
+    IBookingRulesRepository bookingRules)
 {
     public async Task<PagedResult<TutorDto>> SearchAsync(TutorSearchCriteria criteria, CancellationToken ct)
     {
@@ -36,12 +39,12 @@ public class TutorService(
         // Ensure-ahead + próximo slot disponible para los tutores de esta página
         var tutorIds = items.Select(t => t.Id).ToList();
         var now = DateTime.UtcNow;
-        var twoWeeksLater = now.AddDays(14);
+        var horizonEnd = now.AddDays(await BookingHorizonDaysAsync(ct));
         var slotsMap = new Dictionary<Guid, DateTime?>();
 
         if (tutorIds.Count > 0)
         {
-            var slots = await slotAvailability.EnsureAheadAsync(tutorIds, now, twoWeeksLater, ct);
+            var slots = await slotAvailability.EnsureAheadAsync(tutorIds, now, horizonEnd, ct);
             slotsMap = slots
                 .GroupBy(s => s.TutorId)
                 .ToDictionary(
@@ -53,9 +56,10 @@ public class TutorService(
 
         var dtos = items
             .Select(t => new TutorDto(
-                t.Id, t.Name, t.Credentials, t.University, t.Rating, t.Reviews,
+                t.Id, t.Name, t.Credentials, t.Specialization, t.University, t.Rating, t.Reviews,
                 t.Subjects, t.PriceCrc, t.PriceUsd, t.Bio, t.Featured,
-                slotsMap.TryGetValue(t.Id, out var ns) ? ns : null))
+                slotsMap.TryGetValue(t.Id, out var ns) ? ns : null,
+                TutorPhotoService.PhotoUrlOrNull(t)))
             .ToList();
 
         return new PagedResult<TutorDto>(dtos, criteria.Page, criteria.PageSize, totalCount);
@@ -69,14 +73,20 @@ public class TutorService(
         var tutor = await repository.GetByIdAsync(id, ct);
         if (tutor is null) return null;
 
-        // Ensure-ahead para que el perfil tenga slots reservables en los próximos 14 días
+        // Ensure-ahead para que el perfil tenga slots reservables en el horizonte definido
         var now = DateTime.UtcNow;
-        await slotAvailability.EnsureAheadAsync([id], now, now.AddDays(14), ct);
+        await slotAvailability.EnsureAheadAsync([id], now, now.AddDays(await BookingHorizonDaysAsync(ct)), ct);
         var nextSlot = await slotRepository.GetNextAvailableStartAsync(id, now, ct);
         return new TutorDto(
-            tutor.Id, tutor.Name, tutor.Credentials, tutor.University,
+            tutor.Id, tutor.Name, tutor.Credentials, tutor.Specialization, tutor.University,
             tutor.Rating, tutor.Reviews, tutor.Subjects,
             tutor.PriceCrc, tutor.PriceUsd, tutor.Bio, tutor.Featured,
-            nextSlot);
+            nextSlot,
+            TutorPhotoService.PhotoUrlOrNull(tutor));
     }
+
+    /// <summary>Ventana máxima de reserva definida por el Admin (default 14 días).</summary>
+    private async Task<int> BookingHorizonDaysAsync(CancellationToken ct) =>
+        (await bookingRules.GetAsync(ct))?.BookingHorizonDays
+            ?? BookingRulesDefaults.BookingHorizonDays;
 }

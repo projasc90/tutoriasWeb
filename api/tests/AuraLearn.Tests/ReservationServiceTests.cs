@@ -18,6 +18,7 @@ public class ReservationServiceTests
     private readonly ISlotRepository _slots = Substitute.For<ISlotRepository>();
     private readonly IWalletRepository _wallet = Substitute.For<IWalletRepository>();
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
+    private readonly IBookingRulesRepository _bookingRules = Substitute.For<IBookingRulesRepository>();
     private readonly ReservationService _service;
 
     // Tutor mock para el slot de prueba
@@ -59,7 +60,7 @@ public class ReservationServiceTests
 
     public ReservationServiceTests()
     {
-        _service = new ReservationService(_reservations, _slots, _wallet, new SinpeConfig("88888888"), new SinpeComprobanteValidator());
+        _service = new ReservationService(_reservations, _slots, _wallet, new SinpeConfig("88888888"), new SinpeComprobanteValidator(), _bookingRules);
     }
 
     // --- Creacion: replay idempotente ---
@@ -153,6 +154,120 @@ public class ReservationServiceTests
         await _wallet.DidNotReceive().AddAsync(Arg.Any<WalletEntry>(), Arg.Any<CancellationToken>());
     }
 
+    // --- PaymentInfo usa el receptor de configuracion (no hardcode) ---
+
+    [Fact]
+    public async Task CreateReservation_devuelve_el_receptor_configurado()
+    {
+        var service = new ReservationService(
+            _reservations, _slots, _wallet, new SinpeConfig("89997777"), new SinpeComprobanteValidator(), _bookingRules);
+        var slot = CreateSlot();
+        var studentId = Guid.NewGuid();
+
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+        _reservations.GetByIdempotencyKeyAsync("key-conf", Arg.Any<CancellationToken>())
+            .Returns((Reservation?)null);
+        _reservations.GetActiveBySlotAsync(slot.Id, Arg.Any<CancellationToken>())
+            .Returns((Reservation?)null);
+
+        var result = await service.CreateAsync(
+            studentId, new CreateReservationRequest(slot.Id, "key-conf"), default);
+
+        Assert.True(result.IsCreated);
+        Assert.Equal("89997777", result.Value!.PaymentInfo!.ReceptorPhone);
+    }
+
+    // --- Ventana de pago definida por el Admin (booking_rules) ---
+
+    [Fact]
+    public async Task Create_usa_la_ventana_de_pago_de_la_bd()
+    {
+        _bookingRules.GetAsync(Arg.Any<CancellationToken>()).Returns(new BookingRules { PaymentWindowMinutes = 30 });
+        var slot = CreateSlot();
+        Reservation? captured = null;
+        await _reservations.AddAsync(Arg.Do<Reservation>(r => captured = r), Arg.Any<CancellationToken>());
+        _reservations.GetByIdempotencyKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((Reservation?)null);
+        _reservations.GetActiveBySlotAsync(slot.Id, Arg.Any<CancellationToken>()).Returns((Reservation?)null);
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+
+        await _service.CreateAsync(Guid.NewGuid(), new CreateReservationRequest(slot.Id, "key-ventana"), default);
+
+        // ExpiresAt = ahora + 30 min (no el default de 60)
+        var minutos = (captured!.ExpiresAt - DateTime.UtcNow).TotalMinutes;
+        Assert.InRange(minutos, 28, 31);
+    }
+
+    [Fact]
+    public async Task Create_sin_fila_de_reglas_usa_el_default_de_60_min()
+    {
+        _bookingRules.GetAsync(Arg.Any<CancellationToken>()).Returns((BookingRules?)null);
+        var slot = CreateSlot();
+        Reservation? captured = null;
+        await _reservations.AddAsync(Arg.Do<Reservation>(r => captured = r), Arg.Any<CancellationToken>());
+        _reservations.GetByIdempotencyKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((Reservation?)null);
+        _reservations.GetActiveBySlotAsync(slot.Id, Arg.Any<CancellationToken>()).Returns((Reservation?)null);
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+
+        await _service.CreateAsync(Guid.NewGuid(), new CreateReservationRequest(slot.Id, "key-default"), default);
+
+        var minutos = (captured!.ExpiresAt - DateTime.UtcNow).TotalMinutes;
+        Assert.InRange(minutos, 58, 61);
+    }
+
+    // --- Anticipacion de cancelacion definida por el Admin (booking_rules) ---
+
+    [Fact]
+    public async Task Cancel_con_regla_24h_y_20h_restantes_no_acredita_wallet()
+    {
+        _bookingRules.GetAsync(Arg.Any<CancellationToken>()).Returns(new BookingRules { CancellationNoticeHours = 24 });
+        var studentId = Guid.NewGuid();
+        var slot = CreateSlot(DateTime.UtcNow.AddHours(20)); // faltan 20 h (< 24 h)
+        var reservation = CreateReservation(slot.Id, studentId, ReservationStatus.Confirmed);
+
+        _reservations.GetByIdAsync(reservation.Id, Arg.Any<CancellationToken>()).Returns(reservation);
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+
+        await _service.CancelAsync(reservation.Id, studentId, default);
+
+        await _wallet.DidNotReceive().AddAsync(Arg.Any<WalletEntry>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Cancel_con_regla_24h_y_30h_restantes_credita_wallet()
+    {
+        _bookingRules.GetAsync(Arg.Any<CancellationToken>()).Returns(new BookingRules { CancellationNoticeHours = 24 });
+        var studentId = Guid.NewGuid();
+        var slot = CreateSlot(DateTime.UtcNow.AddHours(30)); // faltan 30 h (≥ 24 h)
+        var reservation = CreateReservation(slot.Id, studentId, ReservationStatus.Confirmed);
+
+        _reservations.GetByIdAsync(reservation.Id, Arg.Any<CancellationToken>()).Returns(reservation);
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+
+        await _service.CancelAsync(reservation.Id, studentId, default);
+
+        await _wallet.Received(1).AddAsync(
+            Arg.Is<WalletEntry>(w => w.UserId == studentId && w.Reason == WalletEntryReason.CancellationCredit),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Cancel_sin_fila_de_reglas_usa_el_default_de_12h()
+    {
+        _bookingRules.GetAsync(Arg.Any<CancellationToken>()).Returns((BookingRules?)null);
+        var studentId = Guid.NewGuid();
+        var slot = CreateSlot(DateTime.UtcNow.AddHours(13)); // 13 h ≥ default 12 h
+        var reservation = CreateReservation(slot.Id, studentId, ReservationStatus.Confirmed);
+
+        _reservations.GetByIdAsync(reservation.Id, Arg.Any<CancellationToken>()).Returns(reservation);
+        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
+
+        await _service.CancelAsync(reservation.Id, studentId, default);
+
+        await _wallet.Received(1).AddAsync(
+            Arg.Is<WalletEntry>(w => w.UserId == studentId),
+            Arg.Any<CancellationToken>());
+    }
+
     // --- Cancelacion: estado terminal -> 409 ---
 
     [Fact]
@@ -240,29 +355,6 @@ public class ReservationServiceTests
         // La reserva nunca pagó: cancelarla no puede generar crédito
         Assert.True(result.IsDecided);
         await _wallet.DidNotReceive().AddAsync(Arg.Any<WalletEntry>(), Arg.Any<CancellationToken>());
-    }
-
-    // --- PaymentInfo usa el receptor de configuracion (no hardcode) ---
-
-    [Fact]
-    public async Task CreateReservation_devuelve_el_receptor_configurado()
-    {
-        var service = new ReservationService(
-            _reservations, _slots, _wallet, new SinpeConfig("89997777"), new SinpeComprobanteValidator());
-        var slot = CreateSlot();
-        var studentId = Guid.NewGuid();
-
-        _slots.GetByIdAsync(slot.Id, Arg.Any<CancellationToken>()).Returns(slot);
-        _reservations.GetByIdempotencyKeyAsync("key-conf", Arg.Any<CancellationToken>())
-            .Returns((Reservation?)null);
-        _reservations.GetActiveBySlotAsync(slot.Id, Arg.Any<CancellationToken>())
-            .Returns((Reservation?)null);
-
-        var result = await service.CreateAsync(
-            studentId, new CreateReservationRequest(slot.Id, "key-conf"), default);
-
-        Assert.True(result.IsCreated);
-        Assert.Equal("89997777", result.Value!.PaymentInfo!.ReceptorPhone);
     }
 
     // --- Expiracion perezosa (ADR-005): al leer/crear, sin worker ---

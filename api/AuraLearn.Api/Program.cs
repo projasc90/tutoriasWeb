@@ -3,6 +3,7 @@ using AuraLearn.Application.Dto;
 using AuraLearn.Application.Interfaces;
 using AuraLearn.Application.Services;
 using AuraLearn.Domain.Entities;
+using AuraLearn.Infrastructure.Configuration;
 using AuraLearn.Infrastructure.Persistence;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,9 +18,26 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Modo one-shot de migraciones (lo activa el job `migrate` del CI y el
+// entrypoint con APPLY_MIGRATIONS=true). Se calcula antes de la conexión
+// porque cambia qué variable se prefiere: las migraciones van por la URL
+// directa (sin PgBouncer), el runtime por la pooled.
+var isMigrationMode = builder.Configuration["ApplyMigrations"] == "true";
+
 // ── Persistence (EF Core + PostgreSQL) ─────────────────────────────
+// La cadena sale de la primera fuente disponible: ConnectionStrings__Default
+// (override de dev/compose/CI) o las variables que inyecta la integración
+// Neon ↔ Vercel (DATABASE_URL, POSTGRES_URL, PG*). Ver DatabaseConnectionString.
+var database = DatabaseConnectionString.Resolve(
+    builder.Configuration.GetConnectionString("Default"),
+    preferUnpooled: isMigrationMode,
+    read: name => builder.Configuration[name]);
+
+// Solo el origen (nombre de la variable), nunca el valor.
+Console.WriteLine($"[auralearn] Conexión a PostgreSQL desde {database.Source}");
+
 builder.Services.AddDbContext<AuraLearnDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(database.Value));
 
 // ── Application (servicios + validadores) ──────────────────────────
 builder.Services.AddScoped<ITutorRepository, TutorRepository>();
@@ -36,6 +54,15 @@ builder.Services.AddScoped<IBookingRulesRepository, BookingRulesRepository>();
 // Vercel Blob (store privado) o falla explícitamente si falta el token.
 // Local/dev sigue en disco fuera del repo (Storage:DocumentsRoot).
 builder.Services.AddSingleton<IFileStorage>(_ => CreateFileStorage(builder.Configuration));
+
+// La factory de DI es perezosa: sin esto, una credencial de Blob inválida no
+// aparecería hasta la primera subida (403 opacos en producción). Se valida el
+// par BLOB_READ_WRITE_TOKEN + BLOB_STORE_ID aquí para fallar en el arranque.
+if (UsesBlobStorage(builder.Configuration))
+{
+    var blobCredentials = VercelBlobConfiguration.Resolve(name => builder.Configuration[name]);
+    Console.WriteLine($"[auralearn] Archivos en Vercel Blob (store {blobCredentials.StoreId})");
+}
 
 // SlotGenerationService es estático; el resto de servicios van scoped
 builder.Services.AddScoped<SinpeComprobanteValidator>();
@@ -140,7 +167,7 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => fa
 // APPLY_MIGRATIONS=true en el arranque del contenedor aplica las migraciones
 // pendientes y termina (modo one-shot para el deploy). En local se usa
 // `dotnet ef database update` (ver .ai/PROTOCOLS.md); nunca automático silencioso.
-if (builder.Configuration["ApplyMigrations"] == "true")
+if (isMigrationMode)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AuraLearnDbContext>();
@@ -166,19 +193,28 @@ if (string.IsNullOrWhiteSpace(aspnetUrls)
 app.Run();
 
 // ── Selección del storage según configuración ──────────────────────
-// Prioridad: Storage:Provider explícito > BLOB_READ_WRITE_TOKEN presente.
-// En producción (Vercel) faltar el token es un error de despliegue, no algo
-// que deba degradar silenciosamente a disco (el filesystem no persiste).
-static IFileStorage CreateFileStorage(IConfiguration configuration)
+// Prioridad: Storage:Provider explícito > credenciales de Blob presentes
+// (BLOB_READ_WRITE_TOKEN y/o BLOB_STORE_ID, los nombres que inyecta Vercel).
+// En producción faltar el token es un error de despliegue, no algo que deba
+// degradar silenciosamente a disco (el filesystem no persiste).
+static bool UsesBlobStorage(IConfiguration configuration)
 {
     var provider = configuration["Storage:Provider"];
-    var blobToken = configuration["BLOB_READ_WRITE_TOKEN"]
-        ?? configuration["Storage:VercelBlobToken"];
 
-    var useBlob = provider?.Equals("VercelBlob", StringComparison.OrdinalIgnoreCase) == true
-        || (provider is null && !string.IsNullOrWhiteSpace(blobToken));
+    if (provider?.Equals("VercelBlob", StringComparison.OrdinalIgnoreCase) == true)
+        return true;
 
-    if (!useBlob)
+    if (provider is not null)
+        return false;
+
+    return !string.IsNullOrWhiteSpace(configuration[VercelBlobConfiguration.TokenVariable])
+        || !string.IsNullOrWhiteSpace(configuration["Storage:VercelBlobToken"])
+        || !string.IsNullOrWhiteSpace(configuration[VercelBlobConfiguration.StoreIdVariable]);
+}
+
+static IFileStorage CreateFileStorage(IConfiguration configuration)
+{
+    if (!UsesBlobStorage(configuration))
     {
         return new LocalFileStorage(
             configuration["Storage:DocumentsRoot"]
@@ -187,11 +223,7 @@ static IFileStorage CreateFileStorage(IConfiguration configuration)
                 ".auralearn", "uploads", "documents"));
     }
 
-    if (string.IsNullOrWhiteSpace(blobToken))
-        throw new InvalidOperationException(
-            "Storage:Provider=VercelBlob requiere BLOB_READ_WRITE_TOKEN");
+    var credentials = VercelBlobConfiguration.Resolve(name => configuration[name]);
 
-    return new VercelBlobFileStorage(
-        blobToken,
-        configuration["Storage:VercelBlobAccess"] ?? "private");
+    return new VercelBlobFileStorage(credentials.Token, credentials.StoreId, credentials.Access);
 }

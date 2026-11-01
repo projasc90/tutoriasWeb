@@ -10,6 +10,16 @@ maxLines: 70
 Changelog por versión. Clasificación permitida: `feat`, `fix`, `refactor`, `db`, `test`, `docs`.
 > Histórico antiguo NO es carga automática (ver `CONTEXT_BUDGET.md`). Mantener detallada solo la versión actual.
 
+## v0.13.1 — 2026-11-01
+
+- **feat(infra):** el API reutiliza las variables que ya inyectan los proveedores; sin `ConnectionStrings__Default` ni nombres propios. ADR-010, plan `docs/plans/2026-11-01-env-vars-reuse/`.
+  - **`DatabaseConnectionString`** (`Infrastructure/Configuration`): prioridad `ConnectionStrings__Default` → `DATABASE_URL` → `POSTGRES_URL` → `PGHOST`+`PGPORT`+`PGDATABASE`+`PGUSER`+`PGPASSWORD`; en modo migraciones `DATABASE_URL_UNPOOLED` → `POSTGRES_URL_NON_POOLING` → `PGHOST_UNPOOLED`+`PG*`. **Normaliza las URIs `postgresql://` de Neon a `keyword=value`** (Npgsql solo acepta ese formato: la guía anterior era incorrecta y habría fallado al arrancar). Mapea `sslmode`, `channel_binding`, `connect_timeout`, `application_name`, `options`, `search_path`; ignora `pgbouncer`/`supa`. `SslMode=Require` automático en hosts `.neon.tech`.
+  - **`VercelBlobConfiguration`**: reutiliza `BLOB_READ_WRITE_TOKEN` + `BLOB_STORE_ID` (mismos que `web/.env.local`), normaliza el prefijo `store_` para la URL del blob y **falla al arrancar** si el store no coincide con el del token. Sustituye el `Split('_')[3]` de `VercelBlobFileStorage`, que devolvía `store` cuando el id del token venía con prefijo.
+  - **Fail-fast:** la validación de Blob se movió antes de `builder.Build()`; la factory de `AddSingleton<IFileStorage>` es perezosa y el error aparecía en la primera subida (403 opacos). El log de arranque indica el **nombre** de la variable de conexión y el store, nunca valores.
+  - **Tests:** `api/tests` referencia `AuraLearn.Infrastructure`; **20 nuevos** (181/181). EF Core alineado a 10.0.12 (elimina `MSB3277`) y `Microsoft.AspNetCore.Identity` 2.3.13 → `Microsoft.Extensions.Identity.Core` 10.0.12 (elimina NU1902/NU1903). `dotnet build` **0 warnings**.
+  - **Verificado:** arranque con `PG*` y con `DATABASE_URL` (Postgres real) → `/health` `200 Healthy` y `/api/tutors` 200; store id inconsistente → aborta el arranque con mensaje claro; dev local sigue usando `ConnectionStrings:Default`.
+  - **Docs:** `deploy-guide.md` (tabla de variables sin `ConnectionStrings__Default`, secret de CI con URL directa, nota de borrar la variable antigua), `infra.instructions.md`, `api/Dockerfile`, `web/.env.example`.
+
 ## v0.13.0 — 2026-10-30
 
 - **fix(docker):** el primer build en Vercel Container fallaba con `addgroup: not found` (exit 127). `adduser`/`addgroup` son del paquete Debian `adduser`, ausente en las imágenes slim. Ahora se usa `USER app` (UID/GID 1654, incluido en las imágenes oficiales de .NET 8+, creado con `groupadd`/`useradd` en el template oficial) y `COPY --chown=app:app`; se elimina la creación manual del usuario. GOTCHA-013.

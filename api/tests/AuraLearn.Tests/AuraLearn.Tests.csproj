@@ -10,7 +10,15 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.13" />
+    <!-- PasswordHasher<T> vive en Microsoft.Extensions.Identity.Core (ASP.NET Core 10),
+         no en el paquete legacy Microsoft.AspNetCore.Identity 2.3.x, que arrastra
+         System.Security.Cryptography.Xml/Pkcs con advisories NU1902/NU1903. -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.12" />
+    <!-- Alinea EF Core con la versión contra la que compila AuraLearn.Infrastructure
+         (10.0.12 vía Microsoft.EntityFrameworkCore.Design). Sin esto NuGet resuelve
+         10.0.4 desde Npgsql y el build del proyecto de tests emite MSB3277. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="NSubstitute" Version="6.2.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -24,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\AuraLearn.Application\AuraLearn.Application.csproj" />
     <ProjectReference Include="..\..\AuraLearn.Domain\AuraLearn.Domain.csproj" />
+    <ProjectReference Include="..\..\AuraLearn.Infrastructure\AuraLearn.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -38,6 +38,9 @@ los archivos no pueden vivir en disco.
 3. Conectar el store a **ambos** proyectos (`web` y `api`), entornos
    *Production*, *Preview* y *Development*.
 4. Anotar `BLOB_READ_WRITE_TOKEN` (formato `vercel_blob_rw_<storeId>_<secreto>`).
+   Al conectar el store al proyecto, Vercel también inyecta `BLOB_STORE_ID`
+   (`store_<id>`): el API lo normaliza y lo usa en la URL del blob. Son los
+   mismos nombres que el frontend, así que no hay variables duplicadas.
 
 > Un único store privado basta: las fotos de perfil también se sirven a través
 > del API (`GET /api/tutors/{id}/photo`), no por URL pública directa.
@@ -55,12 +58,22 @@ los archivos no pueden vivir en disco.
 |---|---|
 | `PORT` | `8080` ← **crítico**; sin esto todas las rutas devuelven 502 |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
-| `ConnectionStrings__Default` | connection string pooled de Neon |
 | `Jwt__Key` | `openssl rand -base64 48` |
 | `Jwt__Issuer` | `AuraLearn.Api` |
 | `Cors__Origins` | `https://<proyecto-web>.vercel.app` (separar con `;` si hay más) |
+| `BLOB_STORE_ID` | id del store del paso 1 (conectar el store lo inyecta solo) |
 | `BLOB_READ_WRITE_TOKEN` | token del paso 1 |
 | `Storage__Provider` | `VercelBlob` (opcional; sin él se infiere del token) |
+
+> **La conexión a Neon no se configura a mano.** Al conectar la integración de
+> Neon al proyecto, Vercel inyecta `DATABASE_URL` (pooled) y `DATABASE_URL_UNPOOLED`
+> además de `PGHOST`/`PGUSER`/`PGDATABASE`/`PGPASSWORD`. El API toma la primera que
+> exista y la normaliza a `keyword=value` (Npgsql no acepta URIs). `ConnectionStrings__Default`
+> sigue funcionando como override de mayor prioridad si algún día hace falta
+> apuntar a otra base: no hace falta definirla para producción.
+>
+> Si el proyecto ya tiene una `ConnectionStrings__Default` antigua, **bórrala**:
+> gana sobre `DATABASE_URL` y puede apuntar a una base obsoleta.
 
 5. Deploy y verificar: `curl https://<api>.vercel.app/health` → `Healthy`.
 
@@ -89,7 +102,12 @@ los archivos no pueden vivir en disco.
 | Variable | Valor |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | `https://<api>.vercel.app` (paso 2) |
+| `BLOB_STORE_ID` | id del store del paso 1 (lo inyecta la conexión del store) |
 | `BLOB_READ_WRITE_TOKEN` | token del paso 1 (lo usa `/api/blob/upload`) |
+
+> Son los mismos nombres que lee el API: el store se configura una sola vez y
+> ambos proyectos apuntan a él. Sin el token, `/api/blob/upload` responde `501` y
+> el navegador cae al multipart clásico (solo válido en local).
 
 4. Deploy. Copiar el dominio final y **añadirlo a `Cors__Origins`** del proyecto
    `api`, luego redeploy de la API.
@@ -105,11 +123,14 @@ Vercel no permite sobreescribir el comando de arranque, así que las migraciones
 
 ```bash
 cd api
-ConnectionStrings__Default="postgresql://...?sslmode=require" \
+# Sirve cualquier URL que entienda el resolver: DATABASE_URL_UNPOOLED,
+# POSTGRES_URL_NON_POOLING, ConnectionStrings__Default (con URI o keyword=value).
+DATABASE_URL_UNPOOLED="postgresql://...?sslmode=require" \
 Jwt__Key="migration-only-placeholder-not-used-for-auth" \
 ApplyMigrations=true \
 dotnet run --project AuraLearn.Api
-# imprime "[auralearn] Migraciones aplicadas." y termina
+# imprime "[auralearn] Conexión a PostgreSQL desde DATABASE_URL_UNPOOLED"
+# y "[auralearn] Migraciones aplicadas.", luego termina
 ```
 
 ## Paso 5 — GitHub Actions
@@ -118,7 +139,7 @@ Secret requerido (Settings → Secrets and variables → Actions):
 
 | Secret | Valor |
 |---|---|
-| `NEON_CONNECTION_STRING` | connection string pooled de Neon |
+| `NEON_CONNECTION_STRING` | URL **directa** (unpooled) de Neon, p. ej. `DATABASE_URL_UNPOOLED` |
 
 `api-ci` valida en PRs y migra en `main`; el deploy lo hace Vercel con su
 integración Git. `web-ci` solo valida (lint + tsc + build).

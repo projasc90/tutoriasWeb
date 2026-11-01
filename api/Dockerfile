@@ -1,7 +1,11 @@
-# ── AuraLearn API — imagen de producción (Railway / cualquier host de contenedores) ──
+# ── AuraLearn API — imagen de producción (Vercel Container Runtime) ──
 # Multi-stage: build con SDK 10, runtime con aspnet 10 (imagen más pequeña).
-# Secretos: nunca en la imagen; se inyectan por variables de entorno del host
-# (ConnectionStrings__Default, Jwt__Key, Cors__Origins, Storage__DocumentsRoot).
+# Secretos: nunca en la imagen; se inyectan por variables de entorno del host.
+# Los nombres son los estándar de los proveedores (no hay copias propias):
+#   - BD: DATABASE_URL / DATABASE_URL_UNPOOLED / PG* (integración Neon ↔ Vercel)
+#         o ConnectionStrings__Default como override (compose, CI).
+#   - Archivos: BLOB_READ_WRITE_TOKEN + BLOB_STORE_ID (store de Vercel Blob).
+#   - Resto: Jwt__Key, Jwt__Issuer, Cors__Origins, Storage__Provider.
 
 # ── Stage 1: build ─────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

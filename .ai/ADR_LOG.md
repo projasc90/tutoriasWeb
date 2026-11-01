@@ -161,3 +161,23 @@ Ninguna todavía.
 
 **Consecuencias:** Container Runtime está en **Beta**. Scale-to-zero (5 min en producción): cold start .NET de ~1-3 s tras inactividad. Flujo con dos proyectos Vercel sobre el mismo repo. Hobby no permite conectar repos de organizaciones Git (el repo es personal: no aplica). Sin Secure Compute ni Static IPs con imágenes propias. Los documentos siguen fuera de la BD y del repo; `LocalFileStorage` queda solo para desarrollo. Railway/Azure Container Apps/VPS siguen siendo alternativas documentadas en `infra.instructions.md`.
 
+---
+
+## ADR-010
+
+**Título:** Configuración por variables estándar del proveedor (Neon + Vercel Blob)
+**Estado:** Vigente
+**Fecha:** 2026-11-01
+
+**Contexto:** la integración Neon ↔ Vercel ya inyecta `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `PGHOST`, `PGUSER`, `PGDATABASE`, `PGPASSWORD` y los alias `POSTGRES_*`; el store de Blob inyecta `BLOB_STORE_ID` y `BLOB_READ_WRITE_TOKEN`. El API exigía una copia propia (`ConnectionStrings__Default`) y derivaba el store del token, ignorando `BLOB_STORE_ID`. Dos problemas verificados: **Npgsql no acepta URIs `postgresql://`** (la guía de despliegue y el secret de CI usaban ese formato, que falla al arrancar) y **Npgsql solo lee `PGUSER`/`PGPASSWORD`** del entorno, no `PGHOST`/`PGDATABASE`.
+
+**Decisión:**
+- **Resolver en código, sin variables duplicadas.** `Infrastructure/Configuration/DatabaseConnectionString` resuelve por prioridad `ConnectionStrings__Default` (override de dev/compose/CI) → `DATABASE_URL` → `POSTGRES_URL` → `PGHOST`+`PGPORT`+`PGDATABASE`+`PGUSER`+`PGPASSWORD`, y normaliza todo a `keyword=value` con `NpgsqlConnectionStringBuilder`. En modo migraciones (`ApplyMigrations=true`) prefiere `DATABASE_URL_UNPOOLED` / `POSTGRES_URL_NON_POOLING` / `PGHOST_UNPOOLED`: el DDL a través de PgBouncer en transaction mode es frágil.
+- **Mapeo explícito de la query de la URI:** `sslmode`, `channel_binding`, `connect_timeout`, `application_name`, `options`, `search_path`; los parámetros del proveedor (`pgbouncer`, `supa`…) se ignoran. La contraseña se decodifica con `Uri.UnescapeDataString` (Neon la URL-encodea).
+- **TLS automático:** `SslMode=Require` si el host es `.neon.tech`; en local se mantiene `Prefer` para no romper compose.
+- **Blob con los nombres de Vercel:** `VercelBlobConfiguration` lee `BLOB_READ_WRITE_TOKEN` + `BLOB_STORE_ID` (los mismos que `web/.env.local`), acepta el id con o sin prefijo `store_` y lo usa como fuente autoritativa; si discrepa con el del token el arranque falla nombrando ambos ids (no son secretos: aparecen en las URLs).
+- **Fail-fast real:** la validación se ejecuta antes de `builder.Build()`, porque la factory de `AddSingleton<IFileStorage>` es perezosa y la configuración inválida solo aparecía en la primera subida (403 opacos en producción).
+- **Observabilidad sin fugas:** el arranque registra solo el **nombre** de la variable de la que salió la conexión y el store id, nunca la cadena ni el token.
+
+**Consecuencias:** en producción no hay que crear ni mantener variables de conexión: basta conectar la integración de Neon y el store de Blob. Dev local, `docker-compose` y CI siguen funcionando sin cambios (el override gana). Corrige un bug latente: la guía pedía pasar una URI a Npgsql. `VERCEL_OIDC_TOKEN` queda **fuera**: `handleUpload` y el cliente REST .NET necesitan credencial de escritura; migrar exigiría `handleUploadPresigned` + URLs firmadas emitidas desde .NET.
+

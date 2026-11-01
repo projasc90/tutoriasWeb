@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using AuraLearn.Application.Interfaces;
 using AuraLearn.Domain.Enums;
+using AuraLearn.Infrastructure.Configuration;
 
 namespace AuraLearn.Infrastructure.Persistence;
 
@@ -36,14 +37,19 @@ public sealed class VercelBlobFileStorage : IFileStorage, IDisposable
     private readonly string _access;
 
     /// <param name="token">BLOB_READ_WRITE_TOKEN (formato vercel_blob_rw_&lt;storeId&gt;_&lt;secreto&gt;).</param>
+    /// <param name="storeId">
+    /// BLOB_STORE_ID del store (con o sin prefijo <c>store_</c>). Si no se indica
+    /// se deriva del token; si ambos existen deben coincidir.
+    /// </param>
     /// <param name="access">Modo del store: "private" (PII) o "public".</param>
-    public VercelBlobFileStorage(string token, string access = "private", HttpClient? httpClient = null)
+    public VercelBlobFileStorage(
+        string token, string? storeId = null, string access = "private", HttpClient? httpClient = null)
     {
         if (string.IsNullOrWhiteSpace(token))
             throw new ArgumentException("BLOB_READ_WRITE_TOKEN no configurado", nameof(token));
 
-        _token = token;
-        _storeId = ParseStoreId(token);
+        _token = token.Trim();
+        _storeId = VercelBlobConfiguration.ResolveStoreId(_token, storeId);
         _access = access;
 
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
@@ -172,16 +178,6 @@ public sealed class VercelBlobFileStorage : IFileStorage, IDisposable
 
     private string BlobUrl(string pathname) =>
         $"https://{_storeId}.{_access}.blob.vercel-storage.com/{pathname.TrimStart('/')}";
-
-    /// <summary>El token tiene el formato vercel_blob_rw_&lt;storeId&gt;_&lt;secreto&gt;.</summary>
-    private static string ParseStoreId(string token)
-    {
-        var parts = token.Split('_');
-        if (parts.Length < 4 || string.IsNullOrEmpty(parts[3]))
-            throw new ArgumentException("BLOB_READ_WRITE_TOKEN con formato inválido", nameof(token));
-
-        return parts[3];
-    }
 
     private static string? ContentTypeForExtension(string pathname) =>
         Path.GetExtension(pathname).ToLowerInvariant() switch

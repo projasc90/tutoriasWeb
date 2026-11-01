@@ -23,7 +23,7 @@ tutoriasWeb/  (monorepo raíz)
 │   ├── AuraLearn.Api/      #    Program.cs (DI/JWT/CORS/storage), Controllers/, appsettings.json
 │   ├── AuraLearn.Application/  # Dto/, Interfaces/ (puertos: repos + IFileStorage), Services/ + FluentValidation
 │   ├── AuraLearn.Domain/   #    Entities/{Tutor,TutorDocument}.cs, Enums/{Role,VerificationStatus,TutorDocumentKind}.cs
-│   ├── AuraLearn.Infrastructure/  # Persistence/ (DbContext Npgsql, repos, LocalFileStorage), Migrations/
+│   ├── AuraLearn.Infrastructure/  # Persistence/ (DbContext Npgsql, repos, LocalFileStorage), Configuration/ (resolutores de conexión y Blob), Migrations/
     │   └── tests/AuraLearn.Tests/     # xUnit + NSubstitute (AuthService, TutorApplicationService, validadores)
 │
 ├── portal/                 # 🌐 Portal público — RESERVADA (.gitkeep)

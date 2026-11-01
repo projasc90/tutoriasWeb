@@ -9,7 +9,11 @@
 #  - push a main: build + tests + migraciones contra Neon.
 #
 # Secretos requeridos (GitHub → Settings → Secrets and variables → Actions):
-#  - NEON_CONNECTION_STRING: connection string pooled de Neon (sslmode=require).
+#  - NEON_CONNECTION_STRING: URL **directa** (unpooled) de Neon, p. ej. la de
+#    DATABASE_URL_UNPOOLED. Las migraciones hacen DDL: pasar por PgBouncer en
+#    transaction mode es frágil. Se inyecta como ConnectionStrings__Default
+#    (override de mayor prioridad); también valen DATABASE_URL_UNPOOLED o
+#    POSTGRES_URL_NON_POOLING definidas como env.
 #
 # Migraciones: Vercel no permite sobreescribir el comando de arranque, así que
 # el modo one-shot de Program.cs (ApplyMigrations=true) se ejecuta aquí y no

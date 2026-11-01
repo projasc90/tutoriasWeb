@@ -2,7 +2,7 @@
 id: task-patterns
 priority: 3
 loadWhen: debug-o-bug-recurrente
-maxLines: 90
+maxLines: 110
 ---
 
 # Task Patterns — AuraLearn
@@ -13,37 +13,13 @@ Formato: **Contexto → Error observado → Causa → Solución → Aprendido en
 
 ---
 
-## GOTCHA-001 — Next.js 16 difiere de los datos de entrenamiento
+## GOTCHA-001 — Convenciones de `web/`: Next 16, base-nova, tokens MD3, iconos
 
-- **Contexto:** cualquier tarea de código en `web/` (App Router, server actions, tipos de layout).
-- **Error observado:** el agente propone APIs de Next 14/15 que ya no aplican (p. ej. convenciones de `layout.tsx`, tipos como `LayoutProps<"/">` generados por Next 16).
-- **Causa:** Next.js 16.3.6 tiene cambios rompientes respecto a versiones conocidas; `web/AGENTS.md` lo advierte.
-- **Solución:** antes de escribir código, revisar `web/node_modules/next/dist/docs/` (o usar `context7` si está disponible). Copiar patrones existentes del repo (`app/layout.tsx` usa `LayoutProps<"/">`).
-- **Aprendido en:** 2026-09-27 (configuración inicial).
-
-## GOTCHA-002 — shadcn base-nova se monta sobre @base-ui/react, no Radix
-
-- **Contexto:** crear o extender componentes en `web/components/ui/`.
-- **Error observado:** importar primitivas Radix (`@radix-ui/react-*`) o APIs de Radix (slots, `asChild`) que no existen aquí.
-- **Causa:** el proyecto usa `@base-ui/react` (v1.8) con estilo `base-nova`; las APIs difieren (p. ej. `useRender`, `mergeProps`, props `data-*` propias).
-- **Solución:** copiar el patrón de un componente existente (`button.tsx`, `sheet.tsx`) o usar `npx shadcn add <componente>`; iconos lucide-react dentro de `ui/`.
-- **Aprendido en:** 2026-09-27 (configuración inicial).
-
-## GOTCHA-003 — Tokens MD3, no colores crudos
-
-- **Contexto:** estilizar cualquier sección en `web/`.
-- **Error observado:** clases como `bg-[#3525cd]` o `text-slate-500` fuera del sistema.
-- **Causa:** el tema define tokens Material 3 (`--primary`, `--surface-container-*`, `--on-surface-variant`, …) en `app/globals.css` vía `@theme inline`; Tailwind 4 es CSS-first (no hay `tailwind.config`).
-- **Solución:** usar las clases de tokens (`bg-primary`, `text-on-surface-variant`, `bg-surface-container-low`) y la escala tipográfica MD3 (`text-title-md`, `text-display-lg`…). Extender `globals.css` si falta un token.
-- **Aprendido en:** 2026-09-27 (configuración inicial).
-
-## GOTCHA-004 — Iconos duales por contexto
-
-- **Contexto:** añadir iconos.
-- **Error observado:** mezclar Material Symbols con lucide en la misma superficie visual, o romper la variante `filled`.
-- **Causa:** producto usa `MaterialIcon` (Material Symbols, con soporte `filled`); las primitivas `ui/` usan `lucide-react`.
-- **Solución:** en copy/landing usar `<MaterialIcon name="verified" />` (los nombres son identificadores del set de Google, en inglés); en `components/ui` usar lucide. El font se carga una sola vez vía `<MaterialSymbols />` en el root layout.
-- **Aprendido en:** 2026-09-27 (configuración inicial).
+- **Contexto:** cualquier tarea de código o estilos en `web/` (App Router, `components/ui/`, secciones nuevas).
+- **Error observado:** (a) APIs de Next 14/15 que ya no aplican; (b) importar primitivas Radix o `asChild`; (c) clases tipo `bg-[#3525cd]`/`text-slate-500`; (d) mezclar Material Symbols con lucide.
+- **Causa:** Next.js 16.3.6 tiene cambios rompientes (`web/AGENTS.md` lo advierte); el design system usa `@base-ui/react` (estilo `base-nova`, no Radix); el tema son tokens Material 3 en `app/globals.css` (`@theme inline`, Tailwind 4 CSS-first, sin `tailwind.config`); los iconos son duales por contexto.
+- **Solución:** revisar `web/node_modules/next/dist/docs/` antes de escribir código y copiar patrones del repo (`LayoutProps<"/">`); en `components/ui` copiar `button.tsx`/`sheet.tsx` o usar `npx shadcn add` con lucide; en producto usar tokens (`bg-primary`, `text-on-surface-variant`, `text-title-md`) y `<MaterialIcon name="verified" />` (nombres del set de Google, en inglés).
+- **Aprendido en:** 2026-09-27 (configuración inicial; consolidado 2026-11-01).
 
 ## GOTCHA-005 — Alinear rangos de slots por fecha local CR, no UTC
 
@@ -108,6 +84,22 @@ Formato: **Contexto → Error observado → Causa → Solución → Aprendido en
 - **Causa:** el tope de **5 MB** (5242880 B) no es de Vercel: es el `maximumSizeInBytes` que devuelve `onBeforeGenerateToken` en `web/app/api/blob/upload/route.ts`, espejo de `TutorDocumentService.MaxSizeBytes`. El SDK lo aplica en el cliente **antes** de subir.
 - **Solución:** no confundir el límite de la plataforma (**4.5 MB** por request en Vercel Functions) con el tope de negocio (**5 MB**). El rango que la subida directa desbloquea es **4.5–5 MB**; por encima de 5 MB la app rechaza por regla propia. Al verificar E2E usar un archivo de ~4.8 MB.
 - **Aprendido en:** 2026-10-30 (E2E de subida directa contra el store real).
+
+## GOTCHA-014 — Npgsql no acepta URIs y las variables PG* vienen incompletas
+
+- **Contexto:** conectar el API a Neon (o a cualquier Postgres gestionado) usando las variables que inyecta la plataforma (`DATABASE_URL`, `PGHOST`, `PGUSER`, …).
+- **Error observado:** (a) `ArgumentException: Format of the initialization string does not conform…` al pasar `postgresql://user:pass@host/db?sslmode=require` a `UseNpgsql`; (b) con solo `PGHOST`/`PGUSER`/`PGPASSWORD` la conexión cae a `localhost` o al usuario del SO.
+- **Causa:** Npgsql **solo** entiende `keyword=value;`; el formato URI es de libpq/psql. Y del entorno solo respeta `PGUSER`, `PGPASSWORD`, `PGSSLCERT`…: **no** lee `PGHOST`, `PGPORT` ni `PGDATABASE`.
+- **Solución:** pasar siempre por `DatabaseConnectionString.Resolve(...)` (prioridad `ConnectionStrings__Default` → `DATABASE_URL` → `POSTGRES_URL` → `PG*`), que normaliza URIs con `NpgsqlConnectionStringBuilder`, decodifica la contraseña (`Uri.UnescapeDataString`) e ignora parámetros del proveedor. En modo migraciones usar la URL directa (`DATABASE_URL_UNPOOLED`).
+- **Aprendido en:** 2026-11-01 (ADR-010, plan `2026-11-01-env-vars-reuse`).
+
+## GOTCHA-015 — `BLOB_STORE_ID` llega como `store_<id>`; el token puede traerlo también
+
+- **Contexto:** construir la URL de un blob privado de Vercel (`https://<id>.private.blob.vercel-storage.com/...`) desde el API .NET.
+- **Error observado:** con `token.Split('_')[3]` el store id resuelto era `store` y todas las lecturas daban 403/404; además `BLOB_STORE_ID` se ignoraba por completo.
+- **Causa:** Vercel inyecta el id como `store_<id>` (el prefijo **no** forma parte del subdominio del store) y el token puede venir como `vercel_blob_rw_store_<id>_<secreto>`.
+- **Solución:** `VercelBlobConfiguration.ResolveStoreId(token, storeId)` normaliza quitando `store_`, corta el token por el **último** `_` y falla si ambas fuentes discrepan. La validación se ejecuta en el arranque (la factory de DI es perezosa).
+- **Aprendido en:** 2026-11-01 (ADR-010).
 
 ## GOTCHA-013 — `addgroup`/`adduser` no existen en las imágenes slim de .NET
 

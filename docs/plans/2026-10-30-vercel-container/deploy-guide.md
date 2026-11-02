@@ -123,15 +123,37 @@ Vercel no permite sobreescribir el comando de arranque, así que las migraciones
 
 ```bash
 cd api
-# Sirve cualquier URL que entienda el resolver: DATABASE_URL_UNPOOLED,
-# POSTGRES_URL_NON_POOLING, ConnectionStrings__Default (con URI o keyword=value).
+# ⚠️ ASPNETCORE_ENVIRONMENT=Production es OBLIGATORIO.
+# Sin él, `dotnet run` carga appsettings.Development.json, cuyo
+# ConnectionStrings:Default apunta a localhost:5432 y tiene MÁS prioridad que
+# DATABASE_URL_UNPOOLED: las migraciones irían a tu Postgres local y Neon
+# quedaría vacío (síntoma: 42P01 "relation tutors does not exist").
+ASPNETCORE_ENVIRONMENT=Production \
 DATABASE_URL_UNPOOLED="postgresql://...?sslmode=require" \
 Jwt__Key="migration-only-placeholder-not-used-for-auth" \
 ApplyMigrations=true \
 dotnet run --project AuraLearn.Api
-# imprime "[auralearn] Conexión a PostgreSQL desde DATABASE_URL_UNPOOLED"
+# imprime "[auralearn] Conexión a PostgreSQL desde DATABASE_URL_UNPOOLED (ep-xxx.neon.tech/neondb)"
 # y "[auralearn] Migraciones aplicadas.", luego termina
 ```
+
+Verifica que el log diga `desde DATABASE_URL_UNPOOLED` y el host de Neon. Si
+dice `desde ConnectionStrings:Default` y `localhost`, apuntaste a la base
+equivocada.
+
+Comprobación de que el esquema está aplicado (deben aparecer `tutors`, `users`,
+`slots`, `reservations`, `wallet_entries`, `tutor_availability`,
+`tutor_availability_exceptions`, `tutor_documents`, `booking_rules` y
+`__EFMigrationsHistory`):
+
+```bash
+psql "postgresql://...neon.tech/neondb?sslmode=require" -c '\dt'
+```
+
+> **Recordatorio:** `/health` responde `Healthy` aunque la base esté vacía
+> (solo ejecuta `SELECT 1`). El arranque del API registra el estado del esquema:
+> con migraciones pendientes imprime
+> `[auralearn] AVISO: N migraciones pendientes …`.
 
 ## Paso 5 — GitHub Actions
 

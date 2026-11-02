@@ -58,3 +58,19 @@
 - **Causa:** la FK `reservations → slots` es `onDelete: Restrict`; el filtro de purga excluía solo los slots con reserva **activa** (status IN (1,2)), pero los slots con reserva **terminal** (Expired/Cancelled/Rejected) también referencian el slot y bloquean el `DELETE`.
 - **Solución:** la purga solo elimina slots **sin ninguna reserva** (ni activa ni terminal): `Except(slotsConReserva)` sin filtrar status. El historial se conserva (auditoría); un slot con reservas termina de existir lógicamente — deja de ser reservable porque las terminales no bloquean, y el horario futuro lo repueblan las franjas del generador.
 - **Contexto:** 2026-10-01 — smoke del honoring (Fase 4 del cierre de reservas); detectado al probar la UI con el API levantado.
+
+## ERR-BE-007 — 42P01 `relation "tutors" does not exist` en el API desplegado
+
+- **Nombre:** esquema ausente en la base a la que apunta el runtime
+- **Síntoma:** `GET /api/tutors` responde 500 con `Npgsql.PostgresException 42P01: relation "tutors" does not exist`, mientras `/health` responde `200 Healthy`. El log de arranque dice `[auralearn] Conexión a PostgreSQL desde ConnectionStrings:Default`.
+- **Causa:** `/health` solo ejecuta `SELECT 1`, así que valida la conectividad pero no el esquema. La base en uso no tenía migraciones aplicadas. Tres escenarios: (1) el comando manual de la guía corrió **sin** `ASPNETCORE_ENVIRONMENT=Production`, de modo que `dotnet run` cargó `appsettings.Development.json` y migró el Postgres **local** (`ConnectionStrings:Default` tiene prioridad sobre `DATABASE_URL_UNPOOLED`); (2) el job `migrate` no corrió o falló; (3) `ConnectionStrings__Default` en Vercel apunta a otra base/branch que la que se migra.
+- **Solución:** ejecutar las migraciones con `ASPNETCORE_ENVIRONMENT=Production` y la URL **directa** de Neon, comprobando que el log diga `desde DATABASE_URL_UNPOOLED (<host>.neon.tech/<db>)`. En Vercel, **borrar** `ConnectionStrings__Default` para que gane `DATABASE_URL` de la integración (ADR-010). Verificar el esquema con `psql "<url>" -c '\dt'`. Desde 0.13.1 el arranque registra host/base y avisa si hay migraciones pendientes (`[auralearn] AVISO: N migraciones pendientes`).
+- **Contexto:** 2026-11-01 — primer despliegue real en Vercel Container.
+
+## ERR-BE-008 — `libgssapi_krb5.so.2` no encontrado al conectar con Npgsql
+
+- **Nombre:** `Cannot load library libgssapi_krb5.so.2` en cada conexión nueva
+- **Síntoma:** en el log del contenedor aparece `Error: libgssapi_krb5.so.2: cannot open shared object file: No such file or directory` repetido por request. **No es fatal**: las consultas se ejecutan correctamente.
+- **Causa:** Npgsql negocia cifrado GSSAPI por defecto (`GSS Encryption Mode=Prefer`) y la imagen `mcr.microsoft.com/dotnet/aspnet:10.0` no incluye esa librería. Neon y cualquier Postgres gestionado usan TLS + SCRAM, así que GSS no aporta nada aquí.
+- **Solución:** desactivar el valor por defecto en el resolutor de conexión (`DatabaseConnectionString.DisableUnusedGss`): `if (builder.GssEncryptionMode == GssEncryptionMode.Prefer) builder.GssEncryptionMode = GssEncryptionMode.Disable;`. Se respeta `Require` si alguien lo pide. No instalar paquetes Kerberos en la imagen.
+- **Contexto:** 2026-11-01 — log del primer deploy; verificado en tests (`DatabaseConnectionStringTests`).

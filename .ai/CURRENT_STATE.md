@@ -7,9 +7,11 @@ maxLines: 60
 
 # Estado Actual — AuraLearn
 
-**Versión backend:** solución `AuraLearn.slnx` .NET 10 · **Versión frontend:** `0.13.0` (SEMVER en `web/package.json`)
+**Versión backend:** solución `AuraLearn.slnx` .NET 10 · **Versión frontend:** `0.13.1` (SEMVER en `web/package.json`)
 
 ## Completado recientemente
+
+- **Arreglos del primer despliegue real** (0.13.1): (a) `42P01 relation "tutors" does not exist` — `dotnet run` sin `ASPNETCORE_ENVIRONMENT=Production` cargaba `appsettings.Development.json` y migró la BD **local**; el arranque ahora registra host/base y avisa de migraciones pendientes (ERR-BE-007, GOTCHA-016). (b) `libgssapi_krb5.so.2` — GSS desactivado en el resolutor (ERR-BE-008). (c) build de `web` — `next build --webpack` por el módulo virtual `@vercel/turbopack-next` del self-host de fonts (ERR-FE-005). Tests **182/182**.
 
 - **Variables del proveedor reutilizadas** (`docs/plans/2026-11-01-env-vars-reuse/`, 0.13.1, ADR-010): el API ya no necesita variables propias. `DatabaseConnectionString` resuelve `ConnectionStrings__Default` → `DATABASE_URL` → `POSTGRES_URL` → `PG*` y **normaliza las URIs `postgresql://` de Neon a `keyword=value`** (Npgsql no acepta URIs: la guía anterior era incorrecta). Las migraciones prefieren `DATABASE_URL_UNPOOLED`/`POSTGRES_URL_NON_POOLING`. `VercelBlobConfiguration` reutiliza `BLOB_READ_WRITE_TOKEN` + `BLOB_STORE_ID` (mismos nombres que `web/`), normaliza el prefijo `store_` y **falla al arrancar** si el store no coincide con el del token (antes la factory perezosa de DI solo fallaba en la primera subida). Tests **181/181**; `dotnet build` 0 warnings (EF alineado a 10.0.12, `Microsoft.Identity.Core` 10.0.12 sustituye al paquete legacy con advisories).
 

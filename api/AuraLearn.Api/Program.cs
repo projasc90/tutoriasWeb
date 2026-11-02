@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using System.Text;
 
 using System.Text.Json.Serialization;
@@ -33,8 +34,13 @@ var database = DatabaseConnectionString.Resolve(
     preferUnpooled: isMigrationMode,
     read: name => builder.Configuration[name]);
 
-// Solo el origen (nombre de la variable), nunca el valor.
-Console.WriteLine($"[auralearn] Conexión a PostgreSQL desde {database.Source}");
+// Solo el origen (nombre de la variable) y host/base: nunca usuario ni contraseña.
+// El host/base es lo que evita diagnosticar a ciegas "¿contra qué base hablo?"
+// cuando /health responde Healthy pero las consultas fallan con 42P01.
+var databaseBuilder = new NpgsqlConnectionStringBuilder(database.Value);
+Console.WriteLine(
+    $"[auralearn] Conexión a PostgreSQL desde {database.Source} " +
+    $"({databaseBuilder.Host}/{databaseBuilder.Database})");
 
 builder.Services.AddDbContext<AuraLearnDbContext>(options =>
     options.UseNpgsql(database.Value));
@@ -174,6 +180,29 @@ if (isMigrationMode)
     db.Database.Migrate();
     Console.WriteLine("[auralearn] Migraciones aplicadas.");
     return;
+}
+
+// ── Aviso de esquema desactualizado ────────────────────────────────
+// /health solo hace SELECT 1: con la BD vacía responde Healthy y las consultas
+// fallan con 42P01 "relation ... does not exist". Ese fue el síntoma real al
+// apuntar a una base sin esquema, así que el arranque lo dice explícitamente.
+// Es warn-only: si la BD no responde se calla y /health sigue informando.
+using (var scope = app.Services.CreateScope())
+{
+    var startupDb = scope.ServiceProvider.GetRequiredService<AuraLearnDbContext>();
+    try
+    {
+        var pendingMigrations = startupDb.Database.GetPendingMigrations().Count();
+        Console.WriteLine(pendingMigrations == 0
+            ? "[auralearn] Esquema al día."
+            : $"[auralearn] AVISO: {pendingMigrations} migraciones pendientes " +
+              "(/health responderá Healthy pero las consultas fallarán). Ejecuta el job `migrate`.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(
+            $"[auralearn] AVISO: no se pudo comprobar el esquema ({ex.GetType().Name}).");
+    }
 }
 
 // ── Puerto dinámico (Vercel/Railway/contenedores inyectan PORT) ────

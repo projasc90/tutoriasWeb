@@ -2,7 +2,7 @@
 id: task-patterns
 priority: 3
 loadWhen: debug-o-bug-recurrente
-maxLines: 110
+maxLines: 125
 ---
 
 # Task Patterns — AuraLearn
@@ -100,6 +100,14 @@ Formato: **Contexto → Error observado → Causa → Solución → Aprendido en
 - **Causa:** Vercel inyecta el id como `store_<id>` (el prefijo **no** forma parte del subdominio del store) y el token puede venir como `vercel_blob_rw_store_<id>_<secreto>`.
 - **Solución:** `VercelBlobConfiguration.ResolveStoreId(token, storeId)` normaliza quitando `store_`, corta el token por el **último** `_` y falla si ambas fuentes discrepan. La validación se ejecuta en el arranque (la factory de DI es perezosa).
 - **Aprendido en:** 2026-11-01 (ADR-010).
+
+## GOTCHA-016 — `dotnet run` aplica launchSettings y migra la BD local
+
+- **Contexto:** correr migraciones contra Neon desde la máquina de desarrollo.
+- **Error observado:** el log dice `Conexión a PostgreSQL desde ConnectionStrings:Default (localhost/auralearn_dev)` y en producción aparece `42P01: relation "tutors" does not exist` aunque `/health` responde `Healthy`.
+- **Causa:** `dotnet run` carga `launchSettings.json` → `ASPNETCORE_ENVIRONMENT=Development` → `appsettings.Development.json`, cuyo `ConnectionStrings:Default` apunta a `localhost` y **gana** sobre `DATABASE_URL_UNPOOLED` (prioridad #1 en ADR-010). Las migraciones se aplican al Postgres local y Neon queda vacío. `/health` solo hace `SELECT 1`, así que no detecta el esquema ausente.
+- **Solución:** migrar con `ASPNETCORE_ENVIRONMENT=Production` + `DATABASE_URL_UNPOOLED`, y comprobar que el log diga `desde DATABASE_URL_UNPOOLED (ep-xxx.neon.tech/neondb)`. Desde 0.13.1 el arranque registra host/base y avisa `N migraciones pendientes`. Ver ERR-BE-007.
+- **Aprendido en:** 2026-11-01 (primer deploy real; ERR-FE-005 en el catálogo de frontend).
 
 ## GOTCHA-013 — `addgroup`/`adduser` no existen en las imágenes slim de .NET
 

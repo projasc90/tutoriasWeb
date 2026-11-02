@@ -53,6 +53,21 @@ public class DatabaseConnectionStringTests
         Assert.Equal("p@ss;word", builder.Password);
         Assert.Equal(SslMode.Require, builder.SslMode);
         Assert.Equal(ChannelBinding.Require, builder.ChannelBinding);
+        // La imagen aspnet no trae libgssapi_krb5: se evita el warning en cada conexión.
+        Assert.Equal(GssEncryptionMode.Disable, builder.GssEncryptionMode);
+    }
+
+    [Fact]
+    public void Resolve_respeta_GSS_Require_si_se_pide_explicitamente()
+    {
+        var result = DatabaseConnectionString.Resolve(
+            "Host=ep-x.neon.tech;Database=neondb;Username=u;Password=p;GSS Encryption Mode=Require",
+            preferUnpooled: false,
+            read: Env());
+
+        Assert.Equal(
+            GssEncryptionMode.Require,
+            new NpgsqlConnectionStringBuilder(result.Value).GssEncryptionMode);
     }
 
     [Fact]
@@ -89,6 +104,7 @@ public class DatabaseConnectionStringTests
         Assert.Equal("secreto", builder.Password);
         // Neon exige TLS: se activa solo, sin pedir sslmode en la variable.
         Assert.Equal(SslMode.Require, builder.SslMode);
+        Assert.Equal(GssEncryptionMode.Disable, builder.GssEncryptionMode);
     }
 
     [Fact]

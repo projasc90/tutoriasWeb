@@ -52,3 +52,36 @@ variables de entorno como en el contenedor), contra el Postgres local
 - [ ] `/health` en el proyecto Vercel `api` con las variables de la integración Neon (sin `ConnectionStrings__Default`).
 - [ ] Subida real de un PDF por la ruta de subida directa y `GET …/download` como Admin.
 - [ ] Job `migrate` con `NEON_CONNECTION_STRING` apuntando a la URL **directa**.
+
+---
+
+## Segunda iteración — arreglos del primer despliegue real (2026-11-01)
+
+Fallos observados al desplegar y qué se hizo.
+
+### ERR-BE-007 — `42P01: relation "tutors" does not exist`
+
+| Aspecto | Detalle |
+|---|---|
+| Síntoma | `/api/tutors` → 500 `42P01`; `/health` → 200 `Healthy` (solo hace `SELECT 1`) |
+| Causa | La BD en uso no tenía esquema. El log decía `desde ConnectionStrings:Default`: `dotnet run` sin `ASPNETCORE_ENVIRONMENT=Production` carga `appsettings.Development.json`, y ese override gana sobre `DATABASE_URL_UNPOOLED` |
+| Arreglo | Paso 4 de la guía exige `ASPNETCORE_ENVIRONMENT=Production`; el log de arranque incluye host/base; aviso de migraciones pendientes |
+| Verificación | Arranque contra Postgres local → `Conexión a PostgreSQL desde PGHOST/PGUSER/PGDATABASE (localhost/auralearn_dev)` seguido de `Esquema al día.` |
+
+### ERR-BE-008 — `libgssapi_krb5.so.2`
+
+| Aspecto | Detalle |
+|---|---|
+| Síntoma | `Cannot load library libgssapi_krb5.so.2` en cada conexión nueva; **no** fatal |
+| Causa | Npgsql negocia GSSAPI por defecto (`Prefer`) y la imagen `aspnet:10.0` no trae la librería |
+| Arreglo | `DatabaseConnectionString.DisableUnusedGss` → `GssEncryptionMode.Disable`; se respeta `Require` explícito |
+| Verificación | Tests: la cadena resuelta desde URI y desde `PG*` contiene `GSS Encryption Mode=Disable`, y un `Require` explícito se conserva |
+
+### ERR-FE-005 — build de `web` roto por `@vercel/turbopack-next`
+
+| Aspecto | Detalle |
+|---|---|
+| Síntoma | `[BUILD_UTILS_SPAWN_1] Command "npm run build" exited with 1` + `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'` |
+| Causa | Next 16 usa Turbopack por defecto; su plugin de `next/font/google` reescribe los `src` a un módulo virtual interno |
+| Arreglo | `"build": "next build --webpack"` en `web/package.json` |
+| Verificación | `npm run build` en local → **exit 0**, 22 rutas generadas |

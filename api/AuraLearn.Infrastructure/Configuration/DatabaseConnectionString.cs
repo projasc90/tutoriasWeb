@@ -110,7 +110,9 @@ public static class DatabaseConnectionString
 
         try
         {
-            return new NpgsqlConnectionStringBuilder(trimmed).ConnectionString;
+            var builder = new NpgsqlConnectionStringBuilder(trimmed);
+            DisableUnusedGss(builder);
+            return builder.ConnectionString;
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException)
         {
@@ -166,11 +168,26 @@ public static class DatabaseConnectionString
         if (RequiresTls(host))
             builder.SslMode = SslMode.Require;
 
+        DisableUnusedGss(builder);
+
         return new ResolvedConnectionString(builder.ConnectionString, source);
     }
 
     private static bool RequiresTls(string host) =>
         host.Contains("neon.tech", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Npgsql intenta negociar cifrado GSSAPI por defecto (<c>Prefer</c>) y la imagen
+    /// <c>aspnet</c> no trae <c>libgssapi_krb5</c>: el runtime registra
+    /// "Cannot load library libgssapi_krb5.so.2" en cada conexión nueva. Neon y
+    /// cualquier Postgres gestionado usan TLS + SCRAM, así que GSS no aporta nada.
+    /// Solo se cambia el valor por defecto: si alguien pidió <c>Require</c> se respeta.
+    /// </summary>
+    private static void DisableUnusedGss(NpgsqlConnectionStringBuilder builder)
+    {
+        if (builder.GssEncryptionMode == GssEncryptionMode.Prefer)
+            builder.GssEncryptionMode = GssEncryptionMode.Disable;
+    }
 
     /// <summary>
     /// Convierte <c>postgresql://user:pass@host:5432/db?sslmode=require</c> en
@@ -223,6 +240,7 @@ public static class DatabaseConnectionString
             builder.Password = Uri.UnescapeDataString(password);
 
         ApplyQueryParameters(builder, query);
+        DisableUnusedGss(builder);
         return builder.ConnectionString;
     }
 

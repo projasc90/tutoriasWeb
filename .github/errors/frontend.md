@@ -36,3 +36,11 @@
 - **Causa:** dos sistemas de iconos con ámbito claro: Material Symbols para producto (con `filled`), lucide-react para primitivas `ui/`.
 - **Solución:** `MaterialIcon` en copy/landing; `lucide-react` dentro de `components/ui/`; el font se carga una única vez vía `<MaterialSymbols />` en `app/layout.tsx`.
 - **Contexto:** 2026-09-27 — registrado como GOTCHA-004.
+
+## ERR-FE-005 — `Can't resolve '@vercel/turbopack-next/internal/font/google/font'` en el build
+
+- **Nombre:** fallo del self-host de `next/font/google` con Turbopack
+- **Síntoma:** el build de Vercel termina con `Error: [BUILD_UTILS_SPAWN_1] Command "npm run build" exited with 1` y arriba aparece `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'` señalando un `@font-face` generado (`src: url(@vercel/turbopack-next/internal/font/google/font?{...})`).
+- **Causa:** Next 16 usa **Turbopack por defecto** en `next build`. El CSS no es del repo: lo genera el plugin de `next/font/google` (`app/layout.tsx` usa `Plus_Jakarta_Sans` y `JetBrains_Mono`) reescribiendo cada `src` a ese **módulo virtual interno**, que no es un paquete instalable y no se puede resolver desde `package.json`.
+- **Solución:** `"build": "next build --webpack"` en `web/package.json` (opt-out documentado en `next.md` → *next build options*). Si persiste, limpiar el Build Cache de Vercel al redeploy (`⋯ → Redeploy` sin "Use existing Build Cache"). Solución definitiva: `next/font/local` con los `.woff2` versionados en `web/app/fonts/` (build sin red y sin el módulo interno).
+- **Contexto:** 2026-11-01 — primer build de `web` en Vercel tras ADR-010.

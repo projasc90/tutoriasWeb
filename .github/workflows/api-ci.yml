@@ -12,11 +12,11 @@
 #    inventar un commit que tocara api/**.
 #
 # Secretos requeridos (GitHub → Settings → Secrets and variables → Actions):
-#  - NEON_CONNECTION_STRING: URL **directa** (unpooled) de Neon, p. ej. la de
-#    DATABASE_URL_UNPOOLED. Las migraciones hacen DDL: pasar por PgBouncer en
-#    transaction mode es frágil. Se inyecta como ConnectionStrings__Default
-#    (override de mayor prioridad), así que el `preferUnpooled` del resolver
-#    NO puede corregirlo: la URL tiene que ser la directa.
+#  - NEON_CONNECTION_STRING (o DATABASE_URL_UNPOOLED): URL **directa** (unpooled)
+#    de Neon, p. ej. la de DATABASE_URL_UNPOOLED. Las migraciones hacen DDL:
+#    pasar por PgBouncer en transaction mode es frágil.
+#    Se admite con cualquiera de los dos nombres y tanto en *Repository secrets*
+#    como en un *Environment secret* (el job declara `environment: production`).
 #
 # Migraciones: Vercel no permite sobreescribir el comando de arranque, así que
 # el modo one-shot de Program.cs (ApplyMigrations=true) se ejecuta aquí y no
@@ -64,6 +64,10 @@ jobs:
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     needs: build-test
+    # Permite además los *Environment secrets* del entorno `production`.
+    # Los Repository secrets siguen visibles, así que ambas configuraciones sirven.
+    # Si el entorno tiene revisores obligatorios, el job esperará aprobación.
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -78,10 +82,9 @@ jobs:
       - name: Apply EF migrations (one-shot)
         working-directory: api
         env:
-          # Se inyecta como DATABASE_URL_UNPOOLED (no como ConnectionStrings__Default)
-          # para que el log de arranque nombre la variable real y el resolutor
-          # aplique su preferencia por la conexión directa.
-          DATABASE_URL_UNPOOLED: ${{ secrets.NEON_CONNECTION_STRING }}
+          # Acepta los dos nombres habituales: `||` en expresiones de Actions
+          # devuelve el primero que no esté vacío.
+          DATABASE_URL_UNPOOLED: ${{ secrets.NEON_CONNECTION_STRING || secrets.DATABASE_URL_UNPOOLED }}
           ASPNETCORE_ENVIRONMENT: Production
           # El arranque exige Jwt:Key (falla rápido si falta). El proceso de
           # migración termina antes de servir tráfico, así que el valor es
@@ -91,8 +94,22 @@ jobs:
           # Activa el modo one-shot de Program.cs: aplica migraciones y termina.
           ApplyMigrations: "true"
         run: |
+          # ── Diagnóstico previo ─────────────────────────────────────────
+          # Nada de esto imprime el valor del secret: solo comprueba su forma.
           if [ -z "$DATABASE_URL_UNPOOLED" ]; then
-            echo "::error::El secret NEON_CONNECTION_STRING está vacío. Sin él no hay a qué migrar."
+            echo "::error title=Secret ausente::No llegó ninguna URL de Neon al job."
+            echo "::notice::Crea el *Repository secret* NEON_CONNECTION_STRING (o DATABASE_URL_UNPOOLED) en https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "::notice::Si ya existe, revisa que no esté en la pestaña *Variables* (secrets.X no lee vars.X), que sea de ESTE repo y, si es *Environment secret*, que el entorno sea 'production'."
+            echo "::notice::Alternativa inmediata: migrar en local con ASPNETCORE_ENVIRONMENT=Production y ApplyMigrations=true (deploy-guide.md, paso 4)."
             exit 1
           fi
+
+          # La URL del pooler de PgBouncer cuelga el lock de __EFMigrationsHistory.
+          # En el contenedor solo se avisa; aquí se corta antes de tocar la BD.
+          if printf '%s' "$DATABASE_URL_UNPOOLED" | grep -q -- '-pooler\.'; then
+            echo "::error title=URL pooled::El secret apunta al pooler de PgBouncer."
+            echo "::notice::Usa la URL directa: el mismo host sin el sufijo '-pooler' (Neon Console → Connect → Connection pooling: OFF)."
+            exit 1
+          fi
+
           dotnet run --project AuraLearn.Api -c Release --no-build

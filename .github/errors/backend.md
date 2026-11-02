@@ -75,3 +75,12 @@
 - **Causa:** Npgsql negocia cifrado GSSAPI por defecto (`GSS Encryption Mode=Prefer`) y la imagen `mcr.microsoft.com/dotnet/aspnet:10.0` no incluye esa librería. Neon y cualquier Postgres gestionado usan TLS + SCRAM, así que GSS no aporta nada aquí.
 - **Solución:** desactivar el valor por defecto en el resolutor de conexión (`DatabaseConnectionString.DisableUnusedGss`): `if (builder.GssEncryptionMode == GssEncryptionMode.Prefer) builder.GssEncryptionMode = GssEncryptionMode.Disable;`. Se respeta `Require` si alguien lo pide. No instalar paquetes Kerberos en la imagen.
 - **Contexto:** 2026-11-01 — log del primer deploy; verificado en tests (`DatabaseConnectionStringTests`).
+
+## ERR-BE-009 — El job `migrate` recibe el secret vacío
+
+- **Nombre:** `El secret NEON_CONNECTION_STRING está vacío` en el job `migrate` de `api-ci`
+- **Síntoma:** el job arranca, compila y falla en el último paso en ~1 s con `::error::Secret ausente` (antes: `Process completed with exit code 1` sin más pistas). El repo sí tiene las migraciones en `api/Migrations/`.
+- **Causa más frecuente:** el secret no existe con ese nombre. Otras: está creado en la pestaña **Variables** (`secrets.X` no lee `vars.X`), o en otro repo, o es un *Environment secret* de un entorno distinto al declarado por el job.
+- **Solución:** crear `NEON_CONNECTION_STRING` **o** `DATABASE_URL_UNPOOLED` como *Repository secret* (también vale *Environment secret* del entorno `production`, que el job declara) con la URL **directa** de Neon. Diagnosticar con `gh secret list --repo <owner>/<repo>`. Reintentar con *Actions → api-ci → Run workflow* (`workflow_dispatch`), sin necesidad de un commit.
+- **Related:** el paso valida además que el host no contenga `-pooler.` y aborta antes de tocar la BD (ver ERR-BE-007). Alternativa siempre disponible: migrar en local con `ASPNETCORE_ENVIRONMENT=Production` + `ApplyMigrations=true`.
+- **Contexto:** 2026-11-02 — primer run manual del job tras desbloquear la facturación de Actions.

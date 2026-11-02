@@ -171,15 +171,30 @@ Secret requerido (Settings → Secrets and variables → Actions):
 
 | Secret | Valor |
 |---|---|
-| `NEON_CONNECTION_STRING` | URL **directa** (unpooled) de Neon, p. ej. `DATABASE_URL_UNPOOLED` |
+| `NEON_CONNECTION_STRING` **o** `DATABASE_URL_UNPOOLED` | URL **directa** (unpooled) de Neon (`Connection pooling: OFF`) |
+
+Se acepta cualquiera de los dos nombres. Sirve tanto como *Repository secret*
+como *Environment secret* del entorno `production`, que es el que declara el job
+`migrate`.
 
 `api-ci` valida en PRs y migra en `main`; el deploy lo hace Vercel con su
 integración Git. `web-ci` solo valida (lint + tsc + build).
 
 El secret se inyecta como **`DATABASE_URL_UNPOOLED`** (no como
 `ConnectionStrings__Default`): así el log de arranque del job nombra la variable
-real y el resolutor aplica su preferencia por la conexión directa. Si el host
-contiene `-pooler`, el job imprime un aviso explícito antes de intentar migrar.
+real y el resolutor aplica su preferencia por la conexión directa. Antes de
+ejecutar nada, el paso valida dos cosas y falla con un mensaje accionable si
+no se cumplen:
+
+| Chequeo | Mensaje si falla |
+|---|---|
+| El secret llegó al job | `::error title=Secret ausente::` + enlace a *Settings → Secrets* y las causas típicas |
+| El host no es el pooler | `::error title=URL pooled::` + cómo obtener la URL directa |
+
+> **Si el secret "existe" pero el job lo ve vacío**, revisa en este orden:
+> (1) está en la pestaña *Variables* y no en *Secrets* (`secrets.X` no lee `vars.X`);
+> (2) se creó en otro repo; (3) es *Environment secret* de un entorno con otro
+> nombre. `gh secret list --repo <owner>/<repo>` muestra lo que realmente hay.
 
 **Reintentar sin inventar un commit:** el workflow tiene `workflow_dispatch`.
 GitHub → *Actions* → `api-ci` → **Run workflow** (rama `main`) ejecuta

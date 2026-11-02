@@ -46,7 +46,7 @@ description: Infraestructura, CI/CD y despliegue de AuraLearn (VPS/Azure/AWS)
 ## CI/CD mínimo esperado
 
 - `web`: `.github/workflows/web-ci.yml` (lint + tsc + build en cada PR); deploy automático a preview en PR y a producción en merge a main vía integración Git de Vercel.
-- `api`: `.github/workflows/api-ci.yml` — build + tests en cada PR; en push a main: build + tests + job `migrate` (migraciones one-shot contra Neon). El contenedor lo construye y despliega Vercel con su integración Git; el workflow **no** publica imágenes. Secretos: `NEON_CONNECTION_STRING`.
+- `api`: `.github/workflows/api-ci.yml` — build + tests en cada PR; en push a main **o ejecución manual** (`workflow_dispatch`): build + tests + job `migrate` (migraciones one-shot contra Neon). El contenedor lo construye y despliega Vercel con su integración Git; el workflow **no** publica imágenes. Secretos: `NEON_CONNECTION_STRING`, inyectado como `DATABASE_URL_UNPOOLED` (debe ser la URL **directa**: las migraciones hacen DDL y PgBouncer en transaction mode es frágil).
 
 ## Verificación
 

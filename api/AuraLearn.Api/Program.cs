@@ -42,6 +42,18 @@ Console.WriteLine(
     $"[auralearn] Conexión a PostgreSQL desde {database.Source} " +
     $"({databaseBuilder.Host}/{databaseBuilder.Database})");
 
+// Las migraciones hacen DDL: a través de PgBouncer (host con "-pooler") el lock
+// de __EFMigrationsHistory puede fallar o quedarse colgado. El resolver prefiere
+// la URL directa, pero ConnectionStrings__Default (lo que inyecta el job de CI)
+// tiene prioridad y no se puede corregir por debajo: se avisa en su lugar.
+if (isMigrationMode
+    && databaseBuilder.Host?.Contains("-pooler.", StringComparison.OrdinalIgnoreCase) == true)
+{
+    Console.WriteLine(
+        "[auralearn] AVISO: modo migraciones contra el pooler de PgBouncer. " +
+        "Usa la URL directa (DATABASE_URL_UNPOOLED, sin '-pooler' en el host).");
+}
+
 builder.Services.AddDbContext<AuraLearnDbContext>(options =>
     options.UseNpgsql(database.Value));
 

@@ -28,7 +28,17 @@ los archivos no pueden vivir en disco.
 
 - Repo **personal** en GitHub (Hobby no conecta repos de organizaciones).
 - Cuenta de Vercel con acceso al repo.
-- Base Neon con la connection string **pooled** (`...-pooler...?sslmode=require`).
+- Base Neon con la connection string **pooled** (`...-pooler...?sslmode=require`)
+  para el runtime y la **directa** para las migraciones. La directa es la misma
+  URL sin el sufijo `-pooler` en el host:
+
+  ```text
+  pooled:     ep-<branch>-<id>-pooler.c-14.us-east-1.aws.neon.tech
+  directa:    ep-<branch>-<id>.c-14.us-east-1.aws.neon.tech
+  ```
+
+  Cópiala de Neon Console → *Connect* → `DATABASE_URL_UNPOOLED` para evitar
+  erratas al editar el host a mano.
 
 ## Paso 1 — Store de Vercel Blob
 
@@ -165,6 +175,20 @@ Secret requerido (Settings → Secrets and variables → Actions):
 
 `api-ci` valida en PRs y migra en `main`; el deploy lo hace Vercel con su
 integración Git. `web-ci` solo valida (lint + tsc + build).
+
+El secret se inyecta como **`DATABASE_URL_UNPOOLED`** (no como
+`ConnectionStrings__Default`): así el log de arranque del job nombra la variable
+real y el resolutor aplica su preferencia por la conexión directa. Si el host
+contiene `-pooler`, el job imprime un aviso explícito antes de intentar migrar.
+
+**Reintentar sin inventar un commit:** el workflow tiene `workflow_dispatch`.
+GitHub → *Actions* → `api-ci` → **Run workflow** (rama `main`) ejecuta
+build + tests + `migrate`. Útil cuando el secret estaba mal, cuando la URL
+apuntaba a otra base o tras restaurar un branch de Neon.
+
+Si el job falla con *secret vacío*, configura `NEON_CONNECTION_STRING` antes de
+reintentar: el paso comprueba la variable y sale con un `::error::` legible en
+lugar de un `42P01` a mitad de la migración.
 
 ## Verificación final
 

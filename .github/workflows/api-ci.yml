@@ -7,13 +7,16 @@
 # Disparadores:
 #  - pull_request: build + tests (gate de calidad).
 #  - push a main: build + tests + migraciones contra Neon.
+#  - workflow_dispatch (manual): mismo efecto que push a main. Existe porque,
+#    si el secret estaba mal o la URL apuntaba a otra base, reintentar exigía
+#    inventar un commit que tocara api/**.
 #
 # Secretos requeridos (GitHub → Settings → Secrets and variables → Actions):
 #  - NEON_CONNECTION_STRING: URL **directa** (unpooled) de Neon, p. ej. la de
 #    DATABASE_URL_UNPOOLED. Las migraciones hacen DDL: pasar por PgBouncer en
 #    transaction mode es frágil. Se inyecta como ConnectionStrings__Default
-#    (override de mayor prioridad); también valen DATABASE_URL_UNPOOLED o
-#    POSTGRES_URL_NON_POOLING definidas como env.
+#    (override de mayor prioridad), así que el `preferUnpooled` del resolver
+#    NO puede corregirlo: la URL tiene que ser la directa.
 #
 # Migraciones: Vercel no permite sobreescribir el comando de arranque, así que
 # el modo one-shot de Program.cs (ApplyMigrations=true) se ejecuta aquí y no
@@ -31,6 +34,7 @@ on:
     paths:
       - "api/**"
       - ".github/workflows/api-ci.yml"
+  workflow_dispatch:
 
 env:
   DOTNET_VERSION: "10.0.x"
@@ -54,8 +58,10 @@ jobs:
         run: dotnet test --no-build --verbosity normal
 
   migrate:
-    # Solo en push a main: aplica migraciones EF pendientes contra Neon.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # push a main o ejecución manual: aplica migraciones EF pendientes contra Neon.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     needs: build-test
     steps:
@@ -72,7 +78,10 @@ jobs:
       - name: Apply EF migrations (one-shot)
         working-directory: api
         env:
-          ConnectionStrings__Default: ${{ secrets.NEON_CONNECTION_STRING }}
+          # Se inyecta como DATABASE_URL_UNPOOLED (no como ConnectionStrings__Default)
+          # para que el log de arranque nombre la variable real y el resolutor
+          # aplique su preferencia por la conexión directa.
+          DATABASE_URL_UNPOOLED: ${{ secrets.NEON_CONNECTION_STRING }}
           ASPNETCORE_ENVIRONMENT: Production
           # El arranque exige Jwt:Key (falla rápido si falta). El proceso de
           # migración termina antes de servir tráfico, así que el valor es
@@ -81,4 +90,9 @@ jobs:
           Jwt__Issuer: "AuraLearn.Api"
           # Activa el modo one-shot de Program.cs: aplica migraciones y termina.
           ApplyMigrations: "true"
-        run: dotnet run --project AuraLearn.Api -c Release --no-build
+        run: |
+          if [ -z "$DATABASE_URL_UNPOOLED" ]; then
+            echo "::error::El secret NEON_CONNECTION_STRING está vacío. Sin él no hay a qué migrar."
+            exit 1
+          fi
+          dotnet run --project AuraLearn.Api -c Release --no-build

@@ -7,9 +7,11 @@ maxLines: 60
 
 # Estado Actual — AuraLearn
 
-**Versión backend:** solución `AuraLearn.slnx` .NET 10 · **Versión frontend:** `0.13.1` (SEMVER en `web/package.json`)
+**Versión backend:** solución `AuraLearn.slnx` .NET 10 · **Versión frontend:** `0.14.0` (SEMVER en `web/package.json`)
 
 ## Completado recientemente
+
+- **Cambio de rol desde el panel** (0.14.0): `PATCH /api/admin/users/{id}/role` (`{"role":"Tutor"}`) elimina la dependencia de `psql` para gestionar permisos. Invariante: no se puede quitar el rol Admin al **último** administrador (`USER_ROLE_LAST_ADMIN_REQUIRED`, 422), validada antes de escribir. `400` rol inválido / `404` usuario inexistente / `422 USER_ROLE_UNCHANGED`. El rol viaja en el JWT (8 h) → tras un cambio hay que **volver a iniciar sesión**. Tests **189/189**; smoke E2E con los 7 caminos. El **bootstrap del primer Admin** sigue siendo manual (registrar → `UPDATE users SET role = 3` → re-login), documentado en `deploy-guide.md`.
 
 - **Arreglos del primer despliegue real** (0.13.1): (a) `42P01 relation "tutors" does not exist` — `dotnet run` sin `ASPNETCORE_ENVIRONMENT=Production` cargaba `appsettings.Development.json` y migró la BD **local**; el arranque ahora registra host/base y avisa de migraciones pendientes (ERR-BE-007, GOTCHA-016). Confirmado en el deploy: ya resuelve `desde DATABASE_URL (…neon.tech/neondb)` y detectó `12 migraciones pendientes`; el job `migrate` no había corrido porque solo se dispara con cambios en `api/**` → ahora tiene `workflow_dispatch` y el secret se inyecta como `DATABASE_URL_UNPOOLED`. (b) `libgssapi_krb5.so.2` — GSS desactivado en el resolutor (ERR-BE-008). (c) build de `web` — `next build --webpack` por el módulo virtual `@vercel/turbopack-next` del self-host de fonts (ERR-FE-005). Tests **182/182**.
 

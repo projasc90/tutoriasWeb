@@ -9,29 +9,32 @@ maxLines: 120
 
 > Máximo 5 entradas. La más reciente arriba con detalle completo; las anteriores resumen en tabla compacta.
 
-## Sprint actual — Configuración por variables del proveedor (0.13.1)
+## Sprint actual — Cambio de rol desde el panel Admin (0.14.0)
 
 **Periodo:** 2026-11-01
-**Versión:** backend .NET 10 (ADR-003) · frontend 0.13.1
+**Versión:** backend .NET 10 (ADR-003) · frontend 0.14.0
 
 ### Hecho
-- **Plan `2026-11-01-env-vars-reuse/` cerrado (ADR-010)**: el API dejó de exigir variables propias.
-  - `Infrastructure/Configuration/DatabaseConnectionString`: prioridad `ConnectionStrings__Default` → `DATABASE_URL` → `POSTGRES_URL` → `PGHOST`+`PGPORT`+`PGDATABASE`+`PGUSER`+`PGPASSWORD`; en modo migraciones `DATABASE_URL_UNPOOLED` → `POSTGRES_URL_NON_POOLING` → `PGHOST_UNPOOLED`+`PG*`. **Npgsql no acepta URIs**: se normaliza a `keyword=value` con `NpgsqlConnectionStringBuilder` (`sslmode`, `channel_binding`, `connect_timeout`, `application_name`, `options`, `search_path`; `pgbouncer`/`supa` ignorados) y `SslMode=Require` automático en `.neon.tech`.
-  - `Infrastructure/Configuration/VercelBlobConfiguration`: reutiliza `BLOB_READ_WRITE_TOKEN` + `BLOB_STORE_ID` (los de `web/.env.local`), normaliza `store_` y falla al arrancar si el store no coincide con el del token. Elimina el `Split('_')[3]` de `VercelBlobFileStorage`.
-  - **Fail-fast:** la validación se movió antes de `builder.Build()`; la factory de `AddSingleton<IFileStorage>` es perezosa y el error solo aparecía en la primera subida.
-  - **Tests:** 181/181 (20 nuevos); `api/tests` referencia `AuraLearn.Infrastructure`; EF alineado a 10.0.12 y `Microsoft.Extensions.Identity.Core` 10.0.12 sustituye al paquete legacy con advisories. `dotnet build` 0 warnings.
+- **`PATCH /api/admin/users/{id}/role`** (`[Authorize(Roles = "Admin")]`): gestiona permisos sin `psql`.
+  - `ChangeUserRoleRequest` + `AdminUserErrors` en `Dto/AdminUserDto.cs`; `ChangeUserRoleResult` y `AdminUserService.ChangeRoleAsync` en Application; `IUserRepository.CountByRoleAsync` + EF en Infrastructure.
+  - **Invariante:** no quitar Admin al **último** administrador (`USER_ROLE_LAST_ADMIN_REQUIRED`, 422), validada antes de escribir. `400` rol inválido (con `Enum.IsDefined`, porque `Enum.TryParse("99")` devuelve `true`), `404` no encontrado, `422 USER_ROLE_UNCHANGED`.
+  - **Efecto JWT:** el rol va en el token (8 h) → tras un cambio hay que **re-login**. Sin migración (`users.role` era int).
+  - **Tests:** 7 nuevos (`AdminUserRoleTests`), **189/189**. Smoke E2E: 200 / 422 UNCHANGED / 400 x2 / 404 / 422 LAST_ADMIN / 401. BD local restaurada y usuarios de smoke eliminados.
+- **Bootstrap del primer Admin** documentado en `deploy-guide.md`: registrar (`register` siempre crea Estudiante) → `UPDATE users SET role = 3` → re-login. Único paso manual que queda.
 
 ### En curso
-- Nada abierto. Pendiente manual: desplegar con la integración de Neon + Blob conectadas y borrar `ConnectionStrings__Default` antigua del panel de Vercel.
+- Nada abierto. Pendiente manual: crear el secret `NEON_CONNECTION_STRING` (URL directa) y correr `migrate`, porque Neon sigue con **12 migraciones pendientes** (`/api/tutors` → 42P01; `/health` da Healthy porque solo hace `SELECT 1`).
 
 ### Siguientes pasos
-1. `NEON_CONNECTION_STRING` del CI → rotarlo a la URL **directa** de Neon.
-2. Subida real de un PDF por la ruta directa y verificación de metadatos/descarga.
-3. P1 del análisis de gaps (canal de sesión, pizarra realtime, notificaciones email, ganancias).
+1. Migrar Neon (job `migrate` con `workflow_dispatch` o local con `ASPNETCORE_ENVIRONMENT=Production`).
+2. Crear el Admin de producción con el procedimiento de bootstrap.
+3. UI para el cambio de rol en `/admin/estudiantes` (el endpoint ya existe).
+4. Revocación inmediata de JWT (`security_stamp`): un Admin degradado conserva permisos hasta 8 h.
+5. P1 del análisis de gaps (canal de sesión, pizarra realtime, notificaciones email, ganancias).
 
 ---
 
-## Entrada anterior — Panel estudiante + admin de estudiantes (0.12.0)
+## Entrada anterior — Configuración por variables del proveedor (0.13.1)
 
 **Resumen:** reservas solo rol Estudiante + `?redirect=` con anti open-redirect, panel `/estudiante/{reservas,monedero}`, `/admin/estudiantes` (búsqueda, filtro rol, paginación), landing con `fetchTutors` real. Backend: `[Authorize(Roles = "Estudiante")]`, `AdminUserService`/`AdminUsersController`, `IUserRepository.SearchAsync` (sin migración). Tests 149/149. Detalle en `docs/plans/2026-10-16-student-panel/` y `version-changes.md` v0.12.0. Nota: `admin.test@auralearn.dev` y `admin-smoke-2@test.dev` siguen pendientes de eliminar.
 

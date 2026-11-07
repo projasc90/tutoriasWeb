@@ -22,6 +22,12 @@ public interface IUserRepository
     /// por rol y búsqueda por texto sobre Email/FullName.
     /// </summary>
     Task<PagedResult<AdminUserDto>> SearchAsync(AdminUserSearchCriteria criteria, CancellationToken ct);
+
+    /// <summary>
+    /// Número de usuarios con el rol indicado. Lo usa el cambio de rol para no
+    /// dejar la plataforma sin administradores.
+    /// </summary>
+    Task<int> CountByRoleAsync(Role role, CancellationToken ct);
 }
 
 /// <summary>Puerto de emisión de tokens JWT (implementado por Infrastructure).</summary>

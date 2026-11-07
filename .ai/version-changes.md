@@ -10,6 +10,18 @@ maxLines: 70
 Changelog por versión. Clasificación permitida: `feat`, `fix`, `refactor`, `db`, `test`, `docs`.
 > Histórico antiguo NO es carga automática (ver `CONTEXT_BUDGET.md`). Mantener detallada solo la versión actual.
 
+## v0.14.0 — 2026-11-01
+
+- **feat(admin):** cambio de rol de usuario sin acceso a la base — `PATCH /api/admin/users/{id}/role` con `{"role":"Tutor"}` (Estudiante | Tutor | Admin), `[Authorize(Roles = "Admin")]`.
+  - **Backend:** `ChangeUserRoleRequest` + `AdminUserErrors` (DTO), `ChangeUserRoleResult` y `AdminUserService.ChangeRoleAsync` (Application), `IUserRepository.CountByRoleAsync` + implementación EF.
+  - **Invariante de negocio:** no se puede quitar el rol Admin al **último** administrador (`USER_ROLE_LAST_ADMIN_REQUIRED`, 422) — la plataforma quedaría sin nadie que apruebe pagos, verifique tutores o edite reglas. Se valida **antes** de escribir, sin depender de un rollback.
+  - **Errores:** `400` rol inválido (con `Enum.IsDefined`, porque `Enum.TryParse("99")` devuelve `true`), `404` usuario inexistente, `422 USER_ROLE_UNCHANGED` si ya tiene ese rol.
+  - **Efecto del JWT:** el rol viaja en el token con 8 h; tras un cambio el afectado debe **volver a iniciar sesión**. Documentado en el endpoint y en la guía.
+  - **Sin migración:** `users.role` ya existía como int.
+  - **Tests:** 7 nuevos (`AdminUserRoleTests`): promoción, no encontrado, mismo rol, degradar al último Admin, degradar con otro Admin presente, no contar admins al degradar no-Admin, y mutación de la entidad antes de persistir. **189/189**.
+  - **Smoke E2E contra el API real:** `200` al promover, `422 USER_ROLE_UNCHANGED`, `400` con `"Rey"` y con `"99"`, `404` usuario inexistente, `422 USER_ROLE_LAST_ADMIN_REQUIRED` con un único Admin, `401` sin token. BD local restaurada y usuarios de smoke eliminados.
+  - **Docs:** `deploy-guide.md` gana la sección *Bootstrap del primer Admin* (registrar → `UPDATE users SET role = 3` → **re-login**), que sigue siendo el único paso manual.
+
 ## v0.13.1 — 2026-11-01
 
 - **fix(infra):** correcciones del **primer despliegue real** en Vercel Container.

@@ -205,6 +205,39 @@ Si el job falla con *secret vacío*, configura `NEON_CONNECTION_STRING` antes de
 reintentar: el paso comprueba la variable y sale con un `::error::` legible en
 lugar de un `42P01` a mitad de la migración.
 
+## Bootstrap del primer Admin
+
+Ninguna migración siembra usuarios (decisión deliberada: un hash de contraseña
+versionado en el repo sería una credencial filtrada). El primer administrador se
+crea una sola vez y de forma manual:
+
+1. **Registrarse** con `POST /api/auth/register`. El endpoint siempre asigna rol
+   `Estudiante`, sin importar lo que envíe el cliente:
+
+   ```bash
+   curl -sS -X POST https://<api>.vercel.app/api/auth/register \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"admin@auralearn.dev","fullName":"Administrador","password":"<12+ caracteres>"}'
+   ```
+
+2. **Promover en BD** (única vez que hace falta `psql`):
+
+   ```sql
+   UPDATE users SET role = 3 WHERE email = 'admin@auralearn.dev';
+   ```
+
+   `role` es el enum `Role` como int: `Estudiante=1`, `Tutor=2`, `Admin=3`.
+
+3. **Volver a iniciar sesión.** El rol viaja dentro del JWT (`JwtTokenService`)
+   con 8 h de expiración: el token obtenido al registrarse sigue diciendo
+   `Estudiante` y da **403** en todos los endpoints de admin.
+
+A partir de aquí los roles se gestionan desde el panel, sin tocar la base:
+`PATCH /api/admin/users/{id}/role` con `{"role":"Tutor"}`. El endpoint rechaza
+quitar el rol Admin al último administrador
+(`USER_ROLE_LAST_ADMIN_REQUIRED`), porque nadie podría aprobar pagos, verificar
+tutores ni editar las reglas de reserva.
+
 ## Verificación final
 
 - [ ] `GET /health` en el proyecto `api` → 200 `Healthy` (readiness: incluye PostgreSQL)

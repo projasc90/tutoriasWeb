@@ -1,6 +1,7 @@
 using AuraLearn.Application.Dto;
 using AuraLearn.Application.Interfaces;
 using AuraLearn.Domain.Entities;
+using AuraLearn.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuraLearn.Infrastructure.Persistence;
@@ -53,4 +54,7 @@ public class UserRepository(AuraLearnDbContext db) : IUserRepository
 
         return new PagedResult<AdminUserDto>(items, criteria.Page, criteria.PageSize, totalCount);
     }
+
+    public async Task<int> CountByRoleAsync(Role role, CancellationToken ct) =>
+        await db.Users.CountAsync(u => u.Role == role, ct);
 }

@@ -53,4 +53,50 @@ public class AdminUsersController(AdminUserService service) : ControllerBase
 
         return Ok(result.Value);
     }
+
+    /// <summary>
+    /// Cambia el rol de un usuario (Estudiante | Tutor | Admin).
+    /// El rol viaja en el JWT: el afectado debe volver a iniciar sesión.
+    /// </summary>
+    [HttpPatch("{id:guid}/role")]
+    [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ChangeRole(
+        Guid id, [FromBody] ChangeUserRoleRequest request, CancellationToken ct)
+    {
+        if (!TryParseRole(request.Role, out var newRole))
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Rol inválido. Valores: Estudiante, Tutor, Admin.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+
+        var result = await service.ChangeRoleAsync(id, newRole, ct);
+
+        if (result.IsNotFound)
+            return NotFound(new ProblemDetails
+            {
+                Title = "Usuario no encontrado",
+                Status = StatusCodes.Status404NotFound,
+            });
+
+        if (result.IsInvalid)
+            return UnprocessableEntity(new { error = result.ErrorCode });
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Acepta el nombre del rol (case-insensitive) y rechaza números fuera del
+    /// enum: <c>Enum.TryParse</c> por sí solo aceptaría <c>"99"</c>.
+    /// </summary>
+    private static bool TryParseRole(string? value, out Role role)
+    {
+        role = default;
+        return !string.IsNullOrWhiteSpace(value)
+            && Enum.TryParse(value, ignoreCase: true, out role)
+            && Enum.IsDefined(role);
+    }
 }
